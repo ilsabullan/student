@@ -11,7 +11,7 @@ export default function OnboardingView(v) {
             <div style={{"display": "flex", "alignItems": "center", "gap": "14px", "minWidth": "0"}}>
         <div style={{"display": "flex", "alignItems": "center", "gap": "8px"}}>
         <div style={{"width": "45px", "height": "30px", "flexShrink": "0", "display": "flex", "alignItems": "center", "justifyContent": "center"}}>
-          <img src={"/logo.png"} alt={"Visync"} style={{"width": "100%", "height": "100%", "objectFit": "contain", "mixBlendMode": "multiply"}} />
+          <img src={"/logo-mark.png"} alt={"Visync"} style={{"width": "100%", "height": "100%", "objectFit": "contain"}} />
         </div>
         <span style={{"fontSize": "17px", "fontWeight": "700", "letterSpacing": "-0.02em"}}>{"Visync"}</span>
         </div>
@@ -27,8 +27,8 @@ export default function OnboardingView(v) {
           </header>
           <div style={{"flex": "1", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center", "padding": "24px 24px 64px", "gap": "36px", "position": "relative"}}>
             <div style={{"display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "18px", "textAlign": "center"}}>
-              <div style={{"width": "96px", "height": "72px", "overflow": "hidden", "animation": "vsFloat 3.2s ease-in-out infinite"}}>
-                <img src={"/logo.png"} alt={""} style={{"width": "100%", "height": "100%", "objectFit": "cover", "transform": "scale(1.5)", "mixBlendMode": "multiply"}} />
+              <div style={{"width": "100px", "height": "92px", "animation": "vsFloat 3.2s ease-in-out infinite"}}>
+                <img src={"/logo.png"} alt={""} style={{"width": "100%", "height": "100%", "objectFit": "contain"}} />
               </div>
               <h1 style={{"margin": "0", "fontSize": "clamp(24px,3vw,32px)", "lineHeight": "1.35", "fontWeight": "700", "letterSpacing": "-0.025em", "textWrap": "balance"}}>
                 {"오늘은 "}

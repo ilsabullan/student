@@ -9,7 +9,7 @@ export default function LectureView(v) {
           <header style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between", "gap": "10px", "padding": v?.ui?.headPad, "borderBottom": "1px solid #ECEEF2", "background": "#FFFFFF"}}>
             <div style={{"display": "flex", "alignItems": "center", "gap": "10px", "minWidth": "0", "flex": "1"}}>
               <div style={{"width": "42px", "height": "28px", "flexShrink": "0", "display": "flex", "alignItems": "center", "justifyContent": "center"}}>
-          <img src={"/logo.png"} alt={"Visync"} style={{"width": "100%", "height": "100%", "objectFit": "contain", "mixBlendMode": "multiply"}} />
+          <img src={"/logo-mark.png"} alt={"Visync"} style={{"width": "100%", "height": "100%", "objectFit": "contain"}} />
         </div>
               <div style={{"display": "flex", "alignItems": "center", "gap": "8px", "fontSize": "13px", "minWidth": "0"}}>
                 <span style={{"display": v?.ui?.crumbFile, "color": "#9A9DA8", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis", "minWidth": "0", "flexShrink": "2"}}>
