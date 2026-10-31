@@ -1,4 +1,4 @@
-import { handle, llm, extractCode } from './_lib';
+import { handle, llm, extractCode } from './_lib.js';
 
 const SYSTEM = `You write ONE interactive, step-animated SVG visualization that helps a university student understand a lecture topic.
 Output ONLY a single \`\`\`js code block containing one JavaScript object expression wrapped in parentheses. No imports, no DOM APIs, no network, no Math.random, no Date, no loops over 2000 iterations.

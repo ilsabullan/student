@@ -1,4 +1,4 @@
-import { handle, llmJson } from './_lib';
+import { handle, llmJson } from './_lib.js';
 
 const SYSTEM = `너는 대학 강의 자료를 분석해 학생용 수업 노트의 뼈대를 만드는 조교야.
 입력: PDF 각 쪽에서 추출한 텍스트(쪽 번호 포함).

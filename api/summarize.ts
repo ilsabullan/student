@@ -1,4 +1,4 @@
-import { handle, llmJson } from './_lib';
+import { handle, llmJson } from './_lib.js';
 
 const SYSTEM = `너는 강의를 듣는 학생의 필기 노트를 정리해 주는 조교야.
 입력: 챕터 제목, 강의 자료 쪽 범위, 교수님 발화 받아쓰기(각 줄에 그때 보던 쪽 번호).
