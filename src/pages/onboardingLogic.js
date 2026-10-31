@@ -57,7 +57,7 @@ class Component extends DCLogic {
       if (!alive()) return;
       const chapters = a.chapters.map(c => { const k = targets.indexOf(c), v = k >= 0 ? vizs[k] : null; return { ...c, viz: v && !v.failed ? v : null, vizError: v && v.failed ? v.error : '' }; });
       const fails = chapters.filter(c => c.vizError);
-      this.setState({ phase: 'ready', progress: 100, analysis: { title: a.title, numPages, chapters, vizCount: targets.length - fails.length, failCount: fails.length, failReason: fails[0] ? fails[0].vizError : '' } });
+      this.setState({ phase: 'ready', progress: 100, analysis: { title: a.title, numPages, chapters, vizCount: targets.length - fails.length, failCount: fails.length, failReason: fails[0] ? fails[0].vizError : '', pages } });
     } catch (e) {
       clearInterval(this.timer);
       set({ phase: 'error', stage: '분석에 실패했어요 · ' + e.message + ' · 파일을 지우고 다시 올려 주세요' });

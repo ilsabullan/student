@@ -271,7 +271,8 @@ const swap = (arr, items) => { arr.splice(0, arr.length, ...items); };
 // 온보딩에서 받은 AI 분석 결과로 챕터·요약·시각화 데이터를 교체 (없으면 데모 데이터 복원)
 function applyAI(comp) {
   const a = window.__visync && window.__visync.analysis;
-  AIX.on = !!a; AIX.vizTimes = {};
+  AIX.on = !!a; AIX.vizTimes = {}; AIX.sayAt = {};
+  AIX.pages = a && Array.isArray(a.pages) && a.pages.length ? a.pages : null; // 있으면 교수님 말씀으로 위치를 따라감
   if (!a) { swap(CH, DEMO.CH); swap(SUMMARY, DEMO.SUMMARY); swap(SUM_PAGES, DEMO.SUM_PAGES); swap(RANGES, DEMO.RANGES); return 0; }
   swap(CH, a.chapters.map(c => ({
     title: c.title, start: c.start, end: c.end, page: c.page, at: '',
@@ -294,13 +295,13 @@ class Component extends DCLogic {
     return { sel: ch, page: SCRIPT[heard - 1][2], step: s.explored[ch] ? n - 1 : liveStepOf(heard, ch), playing: false, tlb: ch !== s.sel ? null : s.tlb };
   }
   goLive() {
-    if (AIX.on) { this.setState(s => ({ follow: true, sel: s.aiLive, page: s.aiPage || CH[s.aiLive].page, step: s.explored[s.aiLive] ? Math.max(0, CH[s.aiLive].steps.length - 1) : 0, playing: !s.explored[s.aiLive] })); return; }
+    if (AIX.on) { this.setState(s => { const ch = chapterOf(s.aiPage), n = CH[ch].steps.length; return { follow: true, sel: ch, page: s.aiPage, step: s.explored[ch] ? Math.max(0, n - 1) : Math.min(this.lastStep[ch] || 0, Math.max(0, n - 1)), playing: !s.explored[ch] && !AIX.pages }; }); return; }
     this.setState(s => ({ follow: true, ...this.syncFor(s.heard, { ...s, follow: true }) }));
   }
   _ai = applyAI(this);
   state = { heard: HEARD0, follow: true, explored: {}, sel: liveOf(HEARD0), step: liveStepOf(HEARD0, liveOf(HEARD0)), playing: false, recording: true, sec: SEC0, tab: 'summary', extra: 0, tick: 0, endOpen: false, toast: '', page: SCRIPT[HEARD0 - 1][2], params: initParams(), pdfLoading: true, pdfMsg: '강의 자료 불러오는 중…', tlb: null, mode: 'demo', micLines: [], interim: '', lay: loadLay(), fromStore: true, aspect: 0.75, vw: typeof window !== 'undefined' ? window.innerWidth : 1280, bh: 0, mtab: 'slide', bw: 0, zs: ['slide', 'notes', 'viz'], active: null };
   _aiInit = AIX.on ? Object.assign(this.state, { mode: 'mic', recording: false, heard: HEARD0, sel: 0, step: 0, playing: true, aiLive: 0, aiPage: CH[0].page, page: CH[0].page, params: initParams(), tab: 'transcript', sec: 0 }) : 0;
-  sumDone = {}; sumBusy = {};
+  sumDone = {}; sumBusy = {}; lastStep = {};
   boardRef = React.createRef();
   vizBodyRef = React.createRef();
   vizSvgRef = React.createRef();
@@ -373,7 +374,8 @@ class Component extends DCLogic {
       this.setState(st => ({ tlb: { hit, page: Math.floor(Math.random() * 10), hits: (st.tlb ? st.tlb.hits : 0) + (hit ? 1 : 0), n: (st.tlb ? st.tlb.n : 0) + 1 } }));
     }, 900);
     this.measure = () => { const b = this.boardRef.current; const vw = window.innerWidth; const bh = b ? Math.round(window.innerHeight - b.getBoundingClientRect().top - (vw < 1024 ? 38 : 56)) : 0; if (vw !== this.state.vw || Math.abs(bh - this.state.bh) > 4) this.setState({ vw, bh }); };
-    this.aiT = setInterval(() => { if (AIX.on && this.state.recording) this.aiSummarize(this.state.aiLive); }, 45000);
+    this.aiT = setInterval(() => { if (AIX.on && this.state.recording) for (let i = 0; i <= this.state.aiLive; i++) this.aiSummarize(i); }, 45000);
+    this.locT = setInterval(() => this.maybeLocate(), 2000);
     this.measure();
     this.onResize = () => { this.measure(); clearTimeout(this.rzT); this.rzT = setTimeout(() => this.renderPage(), 200); };
     window.addEventListener('resize', this.onResize);
@@ -423,17 +425,19 @@ class Component extends DCLogic {
     cancelAnimationFrame(this.fitRaf); this.fitRaf = requestAnimationFrame(() => this.fitViz());
     if (this._lastTab !== this.state.mtab) { this._lastTab = this.state.mtab; if (this.state.mtab === 'slide') setTimeout(() => this.renderPage(), 30); }
   }
-  componentWillUnmount() { this.stopMic(); [this.stepT, this.clockT, this.waveT, this.tlbT, this.aiT].forEach(clearInterval); clearTimeout(this.toastT); window.removeEventListener('resize', this.onResize); if (this.ro) this.ro.disconnect(); }
-  // AI 모드: 녹음 중 학생이 넘긴 쪽을 기준으로 강의 진행 챕터를 갱신하고, 지난 챕터를 요약
+  componentWillUnmount() { this.stopMic(); [this.stepT, this.clockT, this.waveT, this.tlbT, this.aiT, this.locT].forEach(clearInterval); clearTimeout(this.toastT); window.removeEventListener('resize', this.onResize); if (this.ro) this.ro.disconnect(); }
+  // AI 모드: 강의 위치(aiPage)가 바뀌면 진행 챕터를 갱신하고 지난 챕터를 요약.
+  // aiPage는 교수님 말씀(maybeLocate) 또는 실시간 따라가기 중 학생이 직접 맞춘 쪽(flip·jumpPage)으로 바뀜
   aiTrack() {
     if (!AIX.on) return;
     const s = this.state;
-    if (this._pg === s.page && this._rec === s.recording) return;
-    this._pg = s.page; this._rec = s.recording;
-    const ch = chapterOf(s.page);
-    // 첫 녹음 전: 학생이 맞춰 둔 쪽이 수업 시작 위치. 건너뛴 앞 챕터는 '지난 챕터'로 치지 않음
+    if (this._pg === s.aiPage && this._rec === s.recording) return;
+    this._pg = s.aiPage; this._rec = s.recording;
+    // 말씀으로 단계를 맞출 수 있으면 첫 단계에서 기다리고, 아니면 예전처럼 자동 재생
+    const ch = chapterOf(s.aiPage), enter = { sel: ch, step: 0, playing: !AIX.pages };
+    // 첫 녹음 전: 맞춰 둔 쪽이 수업 시작 위치. 건너뛴 앞 챕터는 '지난 챕터'로 치지 않음
     if (!s.recording && !this.aiStarted) {
-      if (ch !== s.aiLive || s.page !== s.aiPage) this.setState({ aiLive: ch, aiPage: s.page, ...(s.follow ? { sel: ch, step: 0, playing: true } : {}) });
+      if (ch !== s.aiLive) this.setState({ aiLive: ch, ...(s.follow ? enter : {}) });
       return;
     }
     if (s.recording) {
@@ -442,13 +446,56 @@ class Component extends DCLogic {
       if (ch > s.aiLive) {
         const prev = s.aiLive;
         AIX.vizTimes[ch] = fmt(s.sec);
-        this.setState({ aiLive: ch, aiPage: s.page, ...(s.follow ? { sel: ch, step: 0, playing: true } : {}) });
+        this.setState({ aiLive: ch, ...(s.follow ? enter : {}) });
         this.aiSummarize(prev);
         return;
       }
-      if (ch === s.aiLive && s.page !== s.aiPage) this.setState({ aiPage: s.page });
     }
-    if (s.follow && ch !== s.sel && ch <= s.aiLive) this.setState({ sel: ch, step: s.explored[ch] ? Math.max(0, CH[ch].steps.length - 1) : 0, playing: !s.explored[ch] });
+    // 교수님이 앞 챕터로 돌아간 경우: 진행 상태는 그대로 두고 화면만 그 챕터로
+    if (s.follow && ch !== s.sel && ch <= s.aiLive) this.setState({ sel: ch, step: s.explored[ch] ? Math.max(0, CH[ch].steps.length - 1) : Math.min(this.lastStep[ch] || 0, Math.max(0, CH[ch].steps.length - 1)), playing: !s.explored[ch] && !AIX.pages });
+  }
+  // 교수님 말씀으로 지금 설명 중인 쪽·시각화 단계 찾기 (새 받아쓰기가 있을 때 8초에 한 번)
+  maybeLocate() {
+    const s = this.state;
+    if (!AIX.on || !AIX.pages || !s.recording || this.locBusy) return;
+    const n = s.micLines.length, from = this.locSent || 0;
+    if (n <= from || Date.now() - (this.locAt || 0) < 8000) return;
+    if (s.micLines.slice(from).map(x => x[1]).join(' ').length < 12) return;
+    const cur = s.aiPage, cand = AIX.pages.filter(p => p.page >= cur - 2 && p.page <= cur + 6);
+    if (!cand.length) return;
+    const chs = [...new Set(cand.map(p => chapterOf(p.page)))].map(i => ({ title: CH[i].title, start: CH[i].start, end: CH[i].end, steps: CH[i].steps }));
+    this.locBusy = true; this.locAt = Date.now(); this.locSent = n;
+    api('/api/locate', { cur, pages: cand.map(p => ({ page: p.page, text: String(p.text || '').slice(0, 700) })), chapters: chs, lines: s.micLines.slice(-8).map(x => x[1]) }, 20000)
+      .then(r => this.applyLocate(r, from, cur), e => console.warn('[Visync] 위치 추적 실패:', e.message))
+      .finally(() => { this.locBusy = false; });
+  }
+  applyLocate(r, from, asked) {
+    const s = this.state;
+    if (!s.recording || s.aiPage !== asked) return; // 그 사이 학생이 위치를 직접 맞췄으면 이 결과는 버림
+    const page = Math.round(Number(r.page)), conf = Number(r.confidence) || 0;
+    if (!page) return;
+    let to = s.aiPage;
+    if (page !== s.aiPage) {
+      // 확신이 높으면 바로, 중간이면 두 번 연속 같은 쪽이 나올 때 이동 (잘못 넘어가는 것 방지)
+      if (conf >= 0.75 || (conf >= 0.45 && this.locCand === page)) { to = page; this.locCand = 0; }
+      else this.locCand = conf >= 0.45 ? page : 0;
+    } else this.locCand = 0;
+    const ch = chapterOf(to), steps = CH[ch].steps.length, step = Number(r.step);
+    const stepOk = to === page && conf >= 0.45 && Number.isInteger(step) && step >= 0 && step < steps;
+    const upd = {};
+    if (to !== s.aiPage) {
+      upd.aiPage = to;
+      if (s.follow) upd.page = to;
+      // 이동의 근거가 된 문장은 새 쪽으로 다시 기록 (요약이 맞는 챕터에 들어가도록)
+      upd.micLines = s.micLines.map((x, i) => i >= from ? [x[0], x[1], to] : x);
+    }
+    if (stepOk) {
+      this.lastStep[ch] = step;
+      const last = s.micLines[s.micLines.length - 1];
+      if (last) (AIX.sayAt[ch] = AIX.sayAt[ch] || {})[step] = [last[0], last[1]];
+    }
+    // 단계는 챕터 진입 처리(aiTrack) 뒤에 적용되도록 함수형 업데이트로
+    this.setState(upd, () => { if (stepOk) this.setState(t => t.follow && t.sel === ch && !t.explored[ch] && t.step !== step ? { step, playing: false } : null); });
   }
   aiSummarize(i) {
     if (!AIX.on || !CH[i] || this.sumBusy[i]) return Promise.resolve();
@@ -477,7 +524,7 @@ class Component extends DCLogic {
     rec.onresult = (ev) => {
       let interim = ''; const add = [];
       for (let i = ev.resultIndex; i < ev.results.length; i++) { const r = ev.results[i]; if (r.isFinal) add.push(r[0].transcript.trim()); else interim += r[0].transcript; }
-      this.setState(s => ({ micLines: s.micLines.concat(add.filter(Boolean).map(t => [fmt(s.sec), t, s.page])), interim }));
+      this.setState(s => ({ micLines: s.micLines.concat(add.filter(Boolean).map(t => [fmt(s.sec), t, AIX.on ? s.aiPage : s.page])), interim }));
     };
     rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.flash('마이크 권한을 허용해 주세요'); this.stopMic(); this.setState({ recording: false }); } };
     rec.onend = () => { if (this.rec === rec && this.state.recording && this.state.mode === 'mic') { try { rec.start(); } catch (x) {} } };
@@ -495,7 +542,7 @@ class Component extends DCLogic {
   download() {
     if (!AIX.on) { this.download2(); return; }
     const L0 = this.live(), ps = this.state.params;
-    Promise.all([this.aiSummarize(L0), ...CH.slice(0, L0 + 1).map((ch, i) => ch.sim ? ch.sim.prefetch(ps[i], 99) : null)]).then(() => this.download2());
+    Promise.all([...CH.slice(0, L0 + 1).map((ch, i) => this.aiSummarize(i)), ...CH.slice(0, L0 + 1).map((ch, i) => ch.sim ? ch.sim.prefetch(ps[i], 99) : null)]).then(() => this.download2());
   }
   download2() {
     const L = this.live();
@@ -580,13 +627,22 @@ class Component extends DCLogic {
     const t = String(raw).trim(), n = Math.round(Number(t)), total = this.pdf ? this.pdf.numPages : TOTAL;
     if (!t || !Number.isFinite(n)) return this.state.page;
     const page = Math.min(total, Math.max(1, n));
-    if (page !== this.state.page) this.setState({ page, follow: AIX.on });
+    const s = this.state;
+    // AI 모드: '교수님이 지금 이 쪽' → 강의 위치도 함께 맞추고 실시간 따라가기
+    if (AIX.on) { if (page !== s.page || page !== s.aiPage || !s.follow) { this.locCand = 0; this.setState({ page, aiPage: page, follow: true }); } }
+    else if (page !== s.page) this.setState({ page, follow: false });
     return page;
+  }
+  // 화살표: 실시간 따라가기 중이면 강의 위치 보정, 아니면 자유롭게 넘겨보기
+  flip(d) {
+    const s = this.state, page = Math.min(this.pdf ? this.pdf.numPages : TOTAL, Math.max(1, s.page + d));
+    if (AIX.on && s.follow) { this.locCand = 0; this.setState({ page, aiPage: page }); }
+    else this.setState({ page, follow: false });
   }
   open(i) { if (i === this.live()) { this.goLive(); return; } this.setState({ sel: i, step: 0, page: CH[i].page, playing: true, tlb: null, follow: false }); }
   renderVals() {
     const s = this.state, L = this.live();
-    const sayLine = AIX.on ? null : SCRIPT.slice(0, s.heard).filter(x => x[3] === s.sel && x[4] === s.step).pop();
+    const sayLine = AIX.on ? ((AIX.sayAt[s.sel] || {})[s.step] || null) : SCRIPT.slice(0, s.heard).filter(x => x[3] === s.sel && x[4] === s.step).pop();
     const liveCount = AIX.on ? 99 : SCRIPT.slice(0, s.heard).filter(x => x[3] === L).length;
     const c = CH[s.sel];
     const n = c.steps.length;
@@ -656,8 +712,8 @@ class Component extends DCLogic {
       vizBodyRef: this.vizBodyRef, vizSvgRef: this.vizSvgRef,
       canvasRef: this.canvasRef, pdfLoading: s.pdfLoading, pdfMsg: s.pdfMsg,
       page: s.page, totalPages: this.pdf ? this.pdf.numPages : TOTAL,
-      prevPage: () => this.setState({ page: Math.max(1, s.page - 1), follow: false }),
-      nextPage: () => this.setState({ page: Math.min(this.pdf ? this.pdf.numPages : TOTAL, s.page + 1), follow: false }),
+      prevPage: () => this.flip(-1),
+      nextPage: () => this.flip(1),
       pageInputW: (String(this.pdf ? this.pdf.numPages : TOTAL).length + 2) + 'ch',
       pageFocus: (ev) => ev.target.select(),
       pageKey: (ev) => { if (ev.key === 'Enter') ev.target.blur(); else if (ev.key === 'Escape') { ev.target.value = s.page; ev.target.blur(); } },

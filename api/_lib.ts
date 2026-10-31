@@ -11,7 +11,7 @@ export function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
-// 우리 사이트에서 온 요청만, IP당 10분에 60회까지(인스턴스 단위 best-effort)
+// 우리 사이트에서 온 요청만, IP당 10분에 150회까지(인스턴스 단위 best-effort) · 수업 중 위치 추적이 8초마다 호출됨
 export async function guard(req: Request): Promise<{ body?: any; error?: Response }> {
   const origin = req.headers.get('origin');
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
@@ -21,7 +21,7 @@ export async function guard(req: Request): Promise<{ body?: any; error?: Respons
   if (!ok) return { error: json({ error: '허용되지 않은 요청이에요' }, 403) };
   const ip = (req.headers.get('x-forwarded-for') || 'local').split(',')[0].trim();
   const now = Date.now(), list = (hits.get(ip) || []).filter(t => now - t < 600_000);
-  if (list.length >= 60) return { error: json({ error: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요' }, 429) };
+  if (list.length >= 150) return { error: json({ error: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요' }, 429) };
   list.push(now); hits.set(ip, list);
   const raw = await req.text();
   if (raw.length > MAX_BODY) return { error: json({ error: '요청이 너무 커요' }, 413) };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RUNNER_SRC } from './runner.js';
 
-export const AIX = { on: false, vizTimes: {} };
+export const AIX = { on: false, vizTimes: {}, pages: null, sayAt: {} };
 
 // ---------- 서버 호출 ----------
 export async function api(path, body, timeoutMs = 90000) {
