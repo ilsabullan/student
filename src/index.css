@@ -1,0 +1,7 @@
+*{box-sizing:border-box}
+html,body{margin:0;background:#ECEEF3;color:#1C1D22;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;word-break:keep-all;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+a{color:#5B5FE8;text-decoration:none}
+a:hover{color:#4347C9}
+@keyframes vzdash{to{stroke-dashoffset:-22}}
+@keyframes vsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
