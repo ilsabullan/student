@@ -431,24 +431,24 @@ export default function LectureView(v) {
         </main>
       </div>
       {v?.toast ? (<>
-        <div style={{"position": "fixed", "left": "50%", "bottom": "36px", "transform": "translateX(-50%)", "background": "#1C1D22", "color": "#FFFFFF", "fontSize": "13px", "padding": "10px 16px", "borderRadius": "10px", "boxShadow": "0 10px 30px rgba(0,0,0,0.2)"}}>
+        <div style={{"position": "fixed", "left": "50%", "bottom": "36px", "zIndex": "1001", "transform": "translateX(-50%)", "background": "#1C1D22", "color": "#FFFFFF", "fontSize": "13px", "padding": "10px 16px", "borderRadius": "10px", "boxShadow": "0 10px 30px rgba(0,0,0,0.2)"}}>
           {v?.toast}
         </div>
       </>) : null}
       {v?.endOpen ? (<>
-        <div onClick={v?.closeEnd} style={{"position": "fixed", "inset": "0", "background": "rgba(28,29,34,0.28)", "backdropFilter": "blur(3px)", "display": "flex", "alignItems": "center", "justifyContent": "center", "padding": "20px"}}>
+        <div onClick={v?.closeEnd} style={{"position": "fixed", "inset": "0", "zIndex": "1000", "background": "rgba(28,29,34,0.28)", "backdropFilter": "blur(3px)", "display": "flex", "alignItems": "center", "justifyContent": "center", "padding": "20px"}}>
           <div onClick={v?.stop} style={{"width": "100%", "maxWidth": "400px", "background": "#FFFFFF", "borderRadius": "18px", "padding": "22px", "display": "flex", "flexDirection": "column", "gap": "18px", "boxShadow": "0 24px 60px -12px rgba(40,30,120,0.25)"}}>
             <div style={{"display": "flex", "flexDirection": "column", "gap": "6px"}}>
               <span style={{"fontSize": "18px", "fontWeight": "700"}}>
-                {"수업을 종료할까요?"}
+                {v?.endTitle}
               </span>
               <span style={{"fontSize": "13px", "lineHeight": "1.6", "color": "#6E717C"}}>
-                {"녹음이 끝나고 노트가 정리돼요. 로그인 없이 사용 중이라 노트는 이 기기에 파일로만 저장할 수 있어요."}
+                {"지금 종료하면 이번 수업의 받아쓰기·요약·시각화 기록이 사라져요. 로그인 없이 사용 중이라 노트는 이 기기에 파일로만 저장할 수 있어요."}
               </span>
             </div>
             <div style={{"display": "flex", "flexDirection": "column", "gap": "8px"}}>
               <button onClick={v?.saveAndEnd} style={{"height": "42px", "border": "none", "borderRadius": "11px", "background": "#1C1D22", "color": "#FFFFFF", "fontSize": "14px", "fontWeight": "600", "cursor": "pointer"}}>
-                {"노트 저장하고 종료"}
+                {v?.endSaveLabel}
               </button>
               <div style={{"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "8px"}}>
                 <button onClick={v?.closeEnd} style={{"height": "40px", "border": "1px solid #E3E5EA", "borderRadius": "11px", "background": "#FFFFFF", "color": "#2E3038", "fontSize": "13px", "fontWeight": "600", "cursor": "pointer"}}>

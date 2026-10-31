@@ -533,11 +533,18 @@ class Component extends DCLogic {
     return true;
   }
   stopMic() { const r = this.rec; this.rec = null; if (r) { try { r.stop(); } catch (x) {} } if (this.state && this.state.interim) this.setState({ interim: '' }); }
+  // 노트 내용이 바뀌었는지 비교하는 값 (AI 모드: 받아쓰기 줄 수, 데모: 들은 대본 줄 수)
+  noteSig() { return AIX.on ? this.state.micLines.length : this.state.heard; }
+  unsaved() { return this.noteSig() !== this.savedSig && (!AIX.on || this.state.micLines.length > 0); }
   download() {
-    if (!AIX.on) { this.download2(); return; }
+    this.savedSig = this.noteSig();
+    if (!AIX.on) { this.download2(); return Promise.resolve(); }
     const L0 = this.live(), ps = this.state.params;
-    Promise.all([...CH.slice(0, L0 + 1).map((ch, i) => this.aiSummarize(i)), ...CH.slice(0, L0 + 1).map((ch, i) => ch.sim ? ch.sim.prefetch(ps[i], 99) : null)]).then(() => this.download2());
+    return Promise.all([...CH.slice(0, L0 + 1).map((ch, i) => this.aiSummarize(i)), ...CH.slice(0, L0 + 1).map((ch, i) => ch.sim ? ch.sim.prefetch(ps[i], 99) : null)])
+      .catch(() => {}).then(() => this.download2());
   }
+  // 수업 종료: 저장 안 한 내용이 있을 때만 확인 창, 아니면 바로 온보딩으로
+  endLecture() { this.stopMic(); this.setState({ endOpen: false, recording: false }); location.hash = '#/'; }
   download2() {
     const L = this.live();
     const esc = (x) => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -739,11 +746,13 @@ class Component extends DCLogic {
       save: () => { this.download(); this.flash('필기 노트를 파일로 저장했어요'); },
       toast: s.toast,
       endOpen: s.endOpen,
-      openEnd: () => this.setState({ endOpen: true }),
+      openEnd: () => this.unsaved() ? this.setState({ endOpen: true }) : this.endLecture(),
+      endTitle: this.savedSig == null ? '노트를 저장하지 않았어요' : '마지막 저장 이후 내용이 저장되지 않았어요',
       closeEnd: () => this.setState({ endOpen: false }),
       stop: (ev) => ev.stopPropagation(),
-      saveAndEnd: () => { this.download(); this.setState({ endOpen: false, recording: false }); setTimeout(() => location.hash = '#/', 500); },
-      endNoSave: () => { this.setState({ endOpen: false, recording: false }); location.hash = '#/'; }
+      saveAndEnd: () => { if (this.ending) return; this.ending = true; this.stopMic(); this.setState({ recording: false, endSaving: true }); this.download().then(() => this.endLecture()); },
+      endSaveLabel: s.endSaving ? '노트 정리하는 중…' : '노트 저장하고 종료',
+      endNoSave: () => this.endLecture()
     };
   }
 }
