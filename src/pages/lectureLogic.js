@@ -4,6 +4,7 @@ import View from './LectureView.jsx';
 import SELF_SRC from './lectureLogic.js?raw';
 import { AIX, makeSim, api } from '../ai/client.js';
 import { RUNNER_SRC } from '../ai/runner.js';
+import { saveProgress, clearSession } from '../ai/session.js';
 
 const nf = (x) => Number.isInteger(x) ? String(x) : x.toFixed(1);
 const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻' };
@@ -302,6 +303,31 @@ class Component extends DCLogic {
   state = { heard: HEARD0, follow: true, explored: {}, sel: liveOf(HEARD0), step: liveStepOf(HEARD0, liveOf(HEARD0)), playing: false, recording: true, sec: SEC0, tab: 'summary', extra: 0, tick: 0, endOpen: false, toast: '', page: SCRIPT[HEARD0 - 1][2], params: initParams(), pdfLoading: true, pdfMsg: '강의 자료 불러오는 중…', tlb: null, mode: 'demo', micLines: [], interim: '', lay: loadLay(), fromStore: true, aspect: 0.75, vw: typeof window !== 'undefined' ? window.innerWidth : 1280, bh: 0, mtab: 'slide', bw: 0, zs: ['slide', 'notes', 'viz'], active: null };
   _aiInit = AIX.on ? Object.assign(this.state, { mode: 'mic', recording: false, heard: HEARD0, sel: 0, step: 0, playing: true, aiLive: 0, aiPage: CH[0].page, page: CH[0].page, params: initParams(), tab: 'transcript', sec: 0 }) : 0;
   sumDone = {}; sumBusy = {}; lastStep = {};
+  _restored = AIX.on ? this.restore() : false;
+  // 새로고침 전 진행 상황 되살리기 (마이크는 다시 켜야 하므로 녹음은 멈춘 상태로)
+  restore() {
+    const p = window.__visync && window.__visync.progress;
+    if (!p || p.v !== 1 || p.chapters !== CH.length) return false;
+    Object.assign(this.state, p.state, { recording: false, playing: false, interim: '' });
+    AIX.vizTimes = p.vizTimes || {}; AIX.sayAt = p.sayAt || {};
+    if (p.summary) swap(SUMMARY, p.summary);
+    if (p.sumPages) swap(SUM_PAGES, p.sumPages);
+    this.sumDone = p.sumDone || {}; this.lastStep = p.lastStep || {};
+    this.aiStarted = !!p.aiStarted; this.savedSig = p.savedSig == null ? undefined : p.savedSig;
+    this.locSent = this.state.micLines.length;
+    return true;
+  }
+  // 진행 상황을 이 기기에 보관 (바뀐 게 있을 때만)
+  persist() {
+    if (!AIX.on || this.ended) return;
+    const s = this.state;
+    const json = JSON.stringify({ v: 1, chapters: CH.length,
+      state: { micLines: s.micLines, aiLive: s.aiLive, aiPage: s.aiPage, page: s.page, sel: s.sel, step: s.step, follow: s.follow, sec: s.sec, explored: s.explored, params: s.params, tab: s.tab },
+      vizTimes: AIX.vizTimes, sayAt: AIX.sayAt, summary: SUMMARY, sumPages: SUM_PAGES, sumDone: this.sumDone, lastStep: this.lastStep, aiStarted: !!this.aiStarted, savedSig: this.savedSig == null ? null : this.savedSig });
+    if (json === this.lastPersist) return;
+    this.lastPersist = json;
+    saveProgress(JSON.parse(json));
+  }
   boardRef = React.createRef();
   vizBodyRef = React.createRef();
   vizSvgRef = React.createRef();
@@ -346,6 +372,9 @@ class Component extends DCLogic {
   scrollRef = React.createRef();
   canvasRef = React.createRef();
   componentDidMount() {
+    if (this._restored) this.flash(this.state.micLines.length ? '새로고침으로 녹음이 멈췄어요 · 녹음 시작을 누르면 이어서 기록해요' : '수업을 다시 불러왔어요', 5000);
+    this.onHide = () => this.persist();
+    document.addEventListener('visibilitychange', this.onHide); window.addEventListener('pagehide', this.onHide);
     this.loadPdf();
     if (window.ResizeObserver && this.boardRef.current) { this.ro = new ResizeObserver(() => { const w = this.boardRef.current ? this.boardRef.current.clientWidth : 0; if (w && w !== this.state.bw) this.setState({ bw: w }); if (this.measure) this.measure(); }); this.ro.observe(this.boardRef.current); }
     this.stepT = setInterval(() => {
@@ -416,6 +445,7 @@ class Component extends DCLogic {
     if (this.pending || this.shown !== this.state.page) { this.pending = false; this.renderPage(); }
   }
   componentDidUpdate() {
+    if (AIX.on && !this.saveT) this.saveT = setTimeout(() => { this.saveT = null; this.persist(); }, 2000);
     this.aiTrack();
     if (this._lastHeard !== this.state.heard) {
       this._lastHeard = this.state.heard;
@@ -425,7 +455,7 @@ class Component extends DCLogic {
     cancelAnimationFrame(this.fitRaf); this.fitRaf = requestAnimationFrame(() => this.fitViz());
     if (this._lastTab !== this.state.mtab) { this._lastTab = this.state.mtab; if (this.state.mtab === 'slide') setTimeout(() => this.renderPage(), 30); }
   }
-  componentWillUnmount() { this.stopMic(); [this.stepT, this.clockT, this.waveT, this.tlbT, this.aiT, this.locT].forEach(clearInterval); clearTimeout(this.toastT); window.removeEventListener('resize', this.onResize); if (this.ro) this.ro.disconnect(); }
+  componentWillUnmount() { this.stopMic(); [this.stepT, this.clockT, this.waveT, this.tlbT, this.aiT, this.locT].forEach(clearInterval); clearTimeout(this.toastT); clearTimeout(this.saveT); this.persist(); document.removeEventListener('visibilitychange', this.onHide); window.removeEventListener('pagehide', this.onHide); window.removeEventListener('resize', this.onResize); if (this.ro) this.ro.disconnect(); }
   // AI 모드: 강의 위치(aiPage)가 바뀌면 진행 챕터를 갱신하고 지난 챕터를 요약.
   // aiPage는 교수님 말씀(maybeLocate) 또는 실시간 따라가기 중 학생이 직접 맞춘 쪽(flip·jumpPage)으로 바뀜
   aiTrack() {
@@ -510,7 +540,7 @@ class Component extends DCLogic {
       this.forceUpdate();
     }, e => this.flash('요약을 만들지 못했어요 · ' + e.message)).finally(() => { this.sumBusy[i] = false; });
   }
-  flash(msg) { clearTimeout(this.toastT); this.setState({ toast: msg }); this.toastT = setTimeout(() => this.setState({ toast: '' }), 2400); }
+  flash(msg, ms = 2400) { clearTimeout(this.toastT); this.setState({ toast: msg }); this.toastT = setTimeout(() => this.setState({ toast: '' }), ms); }
   transcriptLines() {
     const s = this.state;
     if (s.mode === 'mic') return s.micLines.map(x => [x[0], x[1]]).concat(s.interim ? [[fmt(s.sec), s.interim + ' …']] : []);
@@ -544,7 +574,7 @@ class Component extends DCLogic {
       .catch(() => {}).then(() => this.download2());
   }
   // 수업 종료: 저장 안 한 내용이 있을 때만 확인 창, 아니면 바로 온보딩으로
-  endLecture() { this.stopMic(); this.setState({ endOpen: false, recording: false }); location.hash = '#/'; }
+  endLecture() { this.ended = true; clearTimeout(this.saveT); clearSession(); window.__visync = undefined; this.stopMic(); this.setState({ endOpen: false, recording: false }); location.hash = '#/'; }
   download2() {
     const L = this.live();
     const esc = (x) => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

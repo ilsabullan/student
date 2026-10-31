@@ -2,6 +2,7 @@ import React from 'react';
 import { DCLogic } from '../dc';
 import View from './OnboardingView.jsx';
 import { api, extractPdfText, generateViz, pool } from '../ai/client.js';
+import { startSession } from '../ai/session.js';
 
 class Component extends DCLogic {
   state = { mic: 'checking', phase: 'idle', progress: 0, file: null, drag: false, transcript: true, visual: true, stage: '', err: '', analysis: null };
@@ -108,7 +109,14 @@ class Component extends DCLogic {
       reset: () => { clearInterval(this.timer); this.run = null; this.setState({ phase: 'idle', progress: 0, file: null, analysis: null, stage: '' }); },
       toggleTranscript: () => this.setState({ transcript: !s.transcript }),
       toggleVisual: () => this.setState({ visual: !s.visual }),
-      start: () => { if (ready) window.__visync = { file: (typeof File !== 'undefined' && s.file instanceof File) ? s.file : null, name: s.file && s.file.name, analysis: s.analysis }; location.hash = '#/lecture'; }
+      start: async () => {
+        if (ready) {
+          const file = (typeof File !== 'undefined' && s.file instanceof File) ? s.file : null;
+          window.__visync = { file, name: s.file && s.file.name, analysis: s.analysis };
+          if (file) await startSession(file, file.name, s.analysis); // 새로고침해도 수업을 이어가도록 보관
+        }
+        location.hash = '#/lecture';
+      }
     };
   }
 }
