@@ -27,6 +27,8 @@ Drawing kit (already in scope via kit(st)):
 Constants: INK, MUTE, ACC, GRN, RED. Helpers: sup(n) superscript string, nf(x) number format, fmtBytes(bytes).
 
 Rules:
+- Keep EVERY element (including text below boxes and captions) inside the viewBox with at least 12px margin. If you need more room, make the viewBox taller — never draw past its bottom edge.
+- Elements must not overlap: leave at least 8px between a box and any text outside it; put captions in their own row below the last box.
 - Every shape position, size, count and label must be recomputed from the slider values p, so moving a slider visibly changes the picture.
 - Clamp and guard values (no NaN, no negative sizes, max ~40 repeated shapes).
 - Korean text is about 14px wide per character at size 14: keep labels short and inside their boxes, stay within x 0–560.

@@ -2,7 +2,7 @@ import React from 'react';
 import { DCLogic } from '../dc';
 import View from './LectureView.jsx';
 import SELF_SRC from './lectureLogic.js?raw';
-import { AIX, makeSim, api, LANGS, langLabel, rememberLang } from '../ai/client.js';
+import { AIX, makeSim, api, LANGS, langLabel, rememberLang, fitSvgBox } from '../ai/client.js';
 import { RUNNER_SRC } from '../ai/runner.js';
 import { saveProgress, clearSession } from '../ai/session.js';
 import { pageCue } from '../ai/pagecue.js';
@@ -334,6 +334,7 @@ class Component extends DCLogic {
   vizSvgRef = React.createRef();
   fitViz() {
     const b = this.vizBodyRef.current, w = this.vizSvgRef.current;
+    if (w) fitSvgBox(w.querySelector('svg')); // 잘리는 그림은 화면 크기와 상관없이 먼저 바로잡기
     if (!b || !w || this.state.vw < 640) return;
     const svg = w.querySelector('svg'); if (!svg) return;
     const rest = b.scrollHeight - w.offsetHeight;
@@ -665,13 +666,14 @@ class Component extends DCLogic {
   }
   exportScriptAI(L) {
     const codes = CH.slice(0, L + 1).map(ch => ch.sim ? ch.sim.code : null);
-    const code = RUNNER_SRC + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
+    const code = RUNNER_SRC + '\nvar fitSvg=(' + fitSvgBox.toString() + ');' + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
       'function draw(i){var sim=SIMS[i];if(!sim)return;var o;try{o=evalSim(sim,P[i],99)}catch(e){return}var r=o.r,root=document.querySelector(\'[data-vz="\'+i+\'"]\');if(!root)return;' +
-      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");' +
+      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");fitSvg(root.querySelector(".svg svg"));' +
       'root.querySelector(".ex").textContent=r.explain;var fm=root.querySelector(".fm");fm.className="fm"+(r.warn?" warn":"");fm.querySelector("span").textContent=r.formulaLabel;fm.querySelector("b").textContent=r.formula;' +
       'sim.sliders.forEach(function(sl){var v=root.querySelector(\'[data-v="\'+i+\':\'+sl.key+\'"]\');if(v)v.textContent=o.fm[sl.key];var inp=root.querySelector(\'input[data-k="\'+sl.key+\'"]\');if(inp&&+inp.value!==P[i][sl.key])inp.value=P[i][sl.key];});}\n' +
       'document.addEventListener("input",function(ev){var t=ev.target;if(!t.dataset||t.dataset.i==null)return;P[+t.dataset.i][t.dataset.k]=+t.value;draw(+t.dataset.i);});\n' +
-      'document.addEventListener("click",function(ev){var b=ev.target.closest("[data-reset]");if(!b)return;var i=+b.dataset.reset;P[i]=Object.assign({},SIMS[i].defaults);draw(i);});\n';
+      'document.addEventListener("click",function(ev){var b=ev.target.closest("[data-reset]");if(!b)return;var i=+b.dataset.reset;P[i]=Object.assign({},SIMS[i].defaults);draw(i);});\n' +
+      'document.querySelectorAll(".svg svg").forEach(function(s){fitSvg(s);});\n';
     return '<scr' + 'ipt>' + code.replace(/<\/(script)/gi, '<\\/$1') + '</scr' + 'ipt>';
   }
   setParam(ci, key, val) {

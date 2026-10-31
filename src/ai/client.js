@@ -83,6 +83,26 @@ export const simEval = (code, p, st) => runInWorker({ code, p, st });
 const TAGS = new Set(['svg', 'g', 'rect', 'text', 'tspan', 'path', 'line', 'circle', 'ellipse', 'polygon', 'polyline', 'defs', 'marker', 'title']);
 const camel = (k) => k.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 const safe = (v) => typeof v === 'number' || (typeof v === 'string' && !/javascript:|expression\(|url\((?!#)/i.test(v));
+// AI가 그린 그림이 viewBox 밖으로 나가 잘리거나 아래 내용과 겹치지 않도록, 실제로 그려진 범위에 맞춰 viewBox를 넓힘.
+// 단계별로 숨겨진(투명) 요소도 범위에 포함되므로 단계가 바뀌어도 그림 크기가 흔들리지 않음. 노트 파일에도 그대로 넣어 씀.
+export function fitSvgBox(svg) {
+  if (!svg || typeof svg.getBBox !== 'function') return;
+  const cur = svg.getAttribute('viewBox');
+  if (svg.__fitSet !== cur) svg.__fitBase = cur; // 처음이거나 그림이 새로 그려져 viewBox가 바뀐 경우
+  const b = String(svg.__fitBase || '').trim().split(/[\s,]+/).map(Number);
+  if (b.length !== 4 || b.some(isNaN)) return;
+  let bb; try { bb = svg.getBBox(); } catch (e) { return; }
+  if (!bb || (!bb.width && !bb.height)) return;
+  const pad = 10;
+  const x1 = bb.x < b[0] ? bb.x - pad : b[0], y1 = bb.y < b[1] ? bb.y - pad : b[1];
+  const x2 = bb.x + bb.width > b[0] + b[2] ? bb.x + bb.width + pad : b[0] + b[2];
+  const y2 = bb.y + bb.height > b[1] + b[3] ? bb.y + bb.height + pad : b[1] + b[3];
+  const want = [x1, y1, x2 - x1, y2 - y1].map(v => Math.round(v * 10) / 10).join(' ');
+  const next = want === b.join(' ') ? svg.__fitBase : want;
+  if (cur !== next) svg.setAttribute('viewBox', next);
+  svg.__fitSet = next;
+}
+
 export function toReact(n, key) {
   if (typeof n !== 'object') return String(n);
   if (!n || !TAGS.has(n.t)) return null;
