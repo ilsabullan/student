@@ -2,7 +2,7 @@ import React from 'react';
 import { DCLogic } from '../dc';
 import View from './LectureView.jsx';
 import SELF_SRC from './lectureLogic.js?raw';
-import { AIX, makeSim, api } from '../ai/client.js';
+import { AIX, makeSim, api, LANGS, langLabel, rememberLang } from '../ai/client.js';
 import { RUNNER_SRC } from '../ai/runner.js';
 import { saveProgress, clearSession } from '../ai/session.js';
 
@@ -301,7 +301,7 @@ class Component extends DCLogic {
   }
   _ai = applyAI(this);
   state = { heard: HEARD0, follow: true, explored: {}, sel: liveOf(HEARD0), step: liveStepOf(HEARD0, liveOf(HEARD0)), playing: false, recording: true, sec: SEC0, tab: 'summary', extra: 0, tick: 0, endOpen: false, toast: '', page: SCRIPT[HEARD0 - 1][2], params: initParams(), pdfLoading: true, pdfMsg: '강의 자료 불러오는 중…', tlb: null, mode: 'demo', micLines: [], interim: '', lay: loadLay(), fromStore: true, aspect: 0.75, vw: typeof window !== 'undefined' ? window.innerWidth : 1280, bh: 0, mtab: 'slide', bw: 0, zs: ['slide', 'notes', 'viz'], active: null };
-  _aiInit = AIX.on ? Object.assign(this.state, { mode: 'mic', recording: false, heard: HEARD0, sel: 0, step: 0, playing: true, aiLive: 0, aiPage: CH[0].page, page: CH[0].page, params: initParams(), tab: 'transcript', sec: 0 }) : 0;
+  _aiInit = AIX.on ? Object.assign(this.state, { mode: 'mic', recording: false, heard: HEARD0, sel: 0, step: 0, playing: true, aiLive: 0, aiPage: CH[0].page, page: CH[0].page, params: initParams(), tab: 'transcript', sec: 0, lang: (window.__visync && window.__visync.lang) || 'ko-KR' }) : 0;
   sumDone = {}; sumBusy = {}; lastStep = {};
   _restored = AIX.on ? this.restore() : false;
   // 새로고침 전 진행 상황 되살리기 (마이크는 다시 켜야 하므로 녹음은 멈춘 상태로)
@@ -322,7 +322,7 @@ class Component extends DCLogic {
     if (!AIX.on || this.ended) return;
     const s = this.state;
     const json = JSON.stringify({ v: 1, chapters: CH.length,
-      state: { micLines: s.micLines, aiLive: s.aiLive, aiPage: s.aiPage, page: s.page, sel: s.sel, step: s.step, follow: s.follow, sec: s.sec, explored: s.explored, params: s.params, tab: s.tab },
+      state: { micLines: s.micLines, aiLive: s.aiLive, aiPage: s.aiPage, page: s.page, sel: s.sel, step: s.step, follow: s.follow, sec: s.sec, explored: s.explored, params: s.params, tab: s.tab, lang: s.lang },
       vizTimes: AIX.vizTimes, sayAt: AIX.sayAt, summary: SUMMARY, sumPages: SUM_PAGES, sumDone: this.sumDone, lastStep: this.lastStep, aiStarted: !!this.aiStarted, savedSig: this.savedSig == null ? null : this.savedSig });
     if (json === this.lastPersist) return;
     this.lastPersist = json;
@@ -550,7 +550,7 @@ class Component extends DCLogic {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { this.flash('이 브라우저는 음성 인식을 지원하지 않아요 · Chrome을 권장해요'); return false; }
     const rec = new SR();
-    rec.lang = 'ko-KR'; rec.continuous = true; rec.interimResults = true;
+    rec.lang = this.state.lang || 'ko-KR'; rec.continuous = true; rec.interimResults = true;
     rec.onresult = (ev) => {
       let interim = ''; const add = [];
       for (let i = ev.resultIndex; i < ev.results.length; i++) { const r = ev.results[i]; if (r.isFinal) add.push(r[0].transcript.trim()); else interim += r[0].transcript; }
@@ -561,6 +561,14 @@ class Component extends DCLogic {
     this.rec = rec;
     try { rec.start(); } catch (x) {}
     return true;
+  }
+  // 강의 언어 바꾸기: 녹음 중이면 새 언어로 음성 인식을 다시 시작
+  setLang(l) {
+    if (l === this.state.lang) return;
+    rememberLang(l); if (window.__visync) window.__visync.lang = l;
+    const restart = this.state.recording && this.rec;
+    if (restart) this.stopMic();
+    this.setState({ lang: l }, () => { if (restart) this.startMic(); this.flash('강의 언어를 ' + langLabel(l) + '로 바꿨어요'); });
   }
   stopMic() { const r = this.rec; this.rec = null; if (r) { try { r.stop(); } catch (x) {} } if (this.state && this.state.interim) this.setState({ interim: '' }); }
   // 노트 내용이 바뀌었는지 비교하는 값 (AI 모드: 받아쓰기 줄 수, 데모: 들은 대본 줄 수)
@@ -768,10 +776,11 @@ class Component extends DCLogic {
       clock: fmt(s.sec),
       recLabel: s.recording ? '녹음 중' : '일시정지',
       recPillBg: s.recording ? '#FDECEC' : '#F2F3F6', recPillColor: s.recording ? '#D2383E' : '#6E717C', recDot: s.recording ? '#E5484D' : '#B4B7C0',
-      recHint: s.mode === 'mic' ? (s.recording ? '실제 음성을 받아쓰는 중 · 한국어' : '녹음을 시작하면 받아쓰기를 시작해요') : (s.recording ? '데모 대본을 재생 중이에요' : '녹음이 멈춰 있어요'),
+      recHint: s.mode === 'mic' ? (s.recording ? '실제 음성을 받아쓰는 중' : '녹음을 시작하면 받아쓰기를 시작해요') : (s.recording ? '데모 대본을 재생 중이에요' : '녹음이 멈춰 있어요'),
       recBtnLabel: s.recording ? '녹음 중지' : '녹음 시작', recBtnTitle: s.recording ? '녹음 중지' : '녹음 시작',
       recBtnBg: s.recording ? '#1C1D22' : '#F2F3F6', recBtnColor: s.recording ? '#FFFFFF' : '#1C1D22',
       toggleRec: () => { const on = !s.recording; if (s.mode === 'mic') { if (on) { if (!this.startMic()) return; } else this.stopMic(); } this.setState({ recording: on }); },
+      langs: AIX.on ? LANGS.map(([id, label]) => { const on = (s.lang || 'ko-KR') === id; return { label: id === 'ko-KR' ? '한국어' : 'EN', title: '강의 언어: ' + label, go: () => this.setLang(id), bg: on ? '#FFFFFF' : 'transparent', color: on ? '#1C1D22' : '#9A9DA8', shadow: on ? '0 1px 2px rgba(20,20,40,0.08)' : 'none' }; }) : [],
       micEmpty: s.mode === 'mic' && !s.micLines.length && !s.interim,
       save: () => { this.download(); this.flash('필기 노트를 파일로 저장했어요'); },
       toast: s.toast,

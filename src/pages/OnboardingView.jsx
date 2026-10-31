@@ -133,6 +133,16 @@ export default function OnboardingView(v) {
                 </div>
               </>) : null}
               <div style={{"display": "flex", "alignItems": "center", "gap": "8px", "flexWrap": "wrap"}}>
+                <span style={{"fontSize": "12px", "color": "#6E717C", "marginLeft": "4px"}}>
+                  {"강의 언어"}
+                </span>
+                <div role={"group"} aria-label={"강의 언어"} style={{"display": "flex", "padding": "3px", "background": "#F2F3F6", "borderRadius": "9px", "gap": "2px"}}>
+                  {(v?.langs || []).map((lg, lg_i) => (<React.Fragment key={lg_i}>
+                    <button onClick={lg?.go} style={{"height": "26px", "padding": "0 10px", "border": "none", "borderRadius": "7px", "background": lg?.bg, "color": lg?.color, "boxShadow": lg?.shadow, "fontSize": "12px", "fontWeight": lg?.weight, "cursor": "pointer", "fontFamily": "inherit", "whiteSpace": "nowrap"}}>
+                      {lg?.label}
+                    </button>
+                  </React.Fragment>))}
+                </div>
                 <button onClick={v?.start} disabled={v?.notReady} style={{"marginLeft": "auto", "display": "flex", "alignItems": "center", "gap": "6px", "height": "36px", "padding": "0 16px", "border": "none", "borderRadius": "10px", "background": v?.startBg, "color": v?.startColor, "fontSize": "13px", "fontWeight": "600", "cursor": v?.startCursor, "transition": "background .15s"}}>
                   {v?.startLabel}
                   <svg width={"14"} height={"14"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>

@@ -285,9 +285,18 @@ export default function LectureView(v) {
                           <span style={{"flex": "1", "maxWidth": "4px", "borderRadius": "2px", "height": w?.h, "background": w?.c, "transition": "height .14s"}} />
                         </React.Fragment>))}
                       </div>
-                      <span style={{"fontSize": "11px", "color": "#9A9DA8"}}>
-                        {v?.recHint}
-                      </span>
+                      <div style={{"display": "flex", "alignItems": "center", "gap": "8px", "minWidth": "0"}}>
+                        <span style={{"fontSize": "11px", "color": "#9A9DA8", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"}}>
+                          {v?.recHint}
+                        </span>
+                        <div role={"group"} aria-label={"강의 언어"} style={{"display": "flex", "padding": "2px", "background": "#F2F3F6", "borderRadius": "7px", "gap": "2px", "flexShrink": "0"}}>
+                          {(v?.langs || []).map((lg, lg_i) => (<React.Fragment key={lg_i}>
+                            <button onClick={lg?.go} title={lg?.title} style={{"height": "20px", "padding": "0 7px", "border": "none", "borderRadius": "5px", "background": lg?.bg, "color": lg?.color, "boxShadow": lg?.shadow, "fontSize": "10.5px", "fontWeight": "600", "cursor": "pointer", "fontFamily": "inherit"}}>
+                              {lg?.label}
+                            </button>
+                          </React.Fragment>))}
+                        </div>
+                      </div>
                     </div>
                     <button onClick={v?.toggleRec} title={v?.recBtnTitle} style={{"display": "flex", "alignItems": "center", "gap": "6px", "height": "38px", "padding": "0 14px", "border": "none", "borderRadius": "11px", "background": v?.recBtnBg, "color": v?.recBtnColor, "fontSize": "13px", "fontWeight": "600", "cursor": "pointer", "whiteSpace": "nowrap"}}>
                       <span style={{"width": "10px", "height": "10px", "borderRadius": v?.recIconRadius, "background": v?.recIconBg}} />

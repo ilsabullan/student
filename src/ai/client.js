@@ -1,6 +1,12 @@
 import React from 'react';
 import { RUNNER_SRC } from './runner.js';
 
+// 강의 언어 (Chrome 음성 인식은 한 번에 한 언어만 지원)
+export const LANGS = [['ko-KR', '한국어'], ['en-US', 'English']];
+export const langLabel = (l) => (LANGS.find(x => x[0] === l) || LANGS[0])[1];
+export function savedLang() { try { const l = localStorage.getItem('visync.lang'); return LANGS.some(x => x[0] === l) ? l : 'ko-KR'; } catch (e) { return 'ko-KR'; } }
+export function rememberLang(l) { try { localStorage.setItem('visync.lang', l); } catch (e) {} }
+
 export const AIX = { on: false, vizTimes: {}, pages: null, sayAt: {} };
 
 // ---------- 서버 호출 ----------

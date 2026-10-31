@@ -1,11 +1,11 @@
 import React from 'react';
 import { DCLogic } from '../dc';
 import View from './OnboardingView.jsx';
-import { api, extractPdfText, generateViz, pool } from '../ai/client.js';
+import { api, extractPdfText, generateViz, pool, LANGS, savedLang, rememberLang } from '../ai/client.js';
 import { startSession } from '../ai/session.js';
 
 class Component extends DCLogic {
-  state = { mic: 'checking', phase: 'idle', progress: 0, file: null, drag: false, transcript: true, visual: true, stage: '', err: '', analysis: null };
+  state = { mic: 'checking', phase: 'idle', progress: 0, file: null, drag: false, transcript: true, visual: true, stage: '', err: '', analysis: null, lang: savedLang() };
   fileRef = React.createRef();
   componentDidMount() {
     this.micInit();
@@ -107,13 +107,14 @@ class Component extends DCLogic {
       onDrop: (e) => { e.preventDefault(); this.setState({ drag: false }); const f = e.dataTransfer.files?.[0]; if (f) this.begin(f); },
       useSample: () => this.begin({ name: 'OS_11-Memory-management-1.pdf', size: 798734 }),
       reset: () => { clearInterval(this.timer); this.run = null; this.setState({ phase: 'idle', progress: 0, file: null, analysis: null, stage: '' }); },
+      langs: LANGS.map(([id, label]) => { const on = s.lang === id; return { label, go: () => { rememberLang(id); this.setState({ lang: id }); }, bg: on ? '#FFFFFF' : 'transparent', color: on ? '#1C1D22' : '#8A8D98', shadow: on ? '0 1px 2px rgba(20,20,40,0.08)' : 'none', weight: on ? 600 : 500 }; }),
       toggleTranscript: () => this.setState({ transcript: !s.transcript }),
       toggleVisual: () => this.setState({ visual: !s.visual }),
       start: async () => {
         if (ready) {
           const file = (typeof File !== 'undefined' && s.file instanceof File) ? s.file : null;
-          window.__visync = { file, name: s.file && s.file.name, analysis: s.analysis };
-          if (file) await startSession(file, file.name, s.analysis); // 새로고침해도 수업을 이어가도록 보관
+          window.__visync = { file, name: s.file && s.file.name, analysis: s.analysis, lang: s.lang };
+          if (file) await startSession(file, file.name, s.analysis, s.lang); // 새로고침해도 수업을 이어가도록 보관
         }
         location.hash = '#/lecture';
       }

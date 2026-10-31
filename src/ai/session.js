@@ -25,8 +25,8 @@ const get = (key) => run('readonly', s => s.get(key)).catch(() => null);
 const put = (key, value) => run('readwrite', s => s.put(value, key)).catch(e => console.warn('[Visync] 수업 상태 저장 실패:', e));
 
 // 수업 시작: 자료를 보관하고 지난 수업의 진행 상황은 지움
-export function startSession(file, name, analysis) {
-  return run('readwrite', s => { s.put({ file, name, analysis: JSON.parse(JSON.stringify(analysis)) }, 'session'); s.delete('progress'); })
+export function startSession(file, name, analysis, lang) {
+  return run('readwrite', s => { s.put({ file, name, lang, analysis: JSON.parse(JSON.stringify(analysis)) }, 'session'); s.delete('progress'); })
     .catch(e => console.warn('[Visync] 수업 자료 저장 실패:', e));
 }
 
@@ -40,6 +40,6 @@ export function clearSession() {
 export async function restoreSession() {
   const s = await get('session');
   if (!s || !s.file || !s.analysis) return false;
-  window.__visync = { file: s.file, name: s.name, analysis: s.analysis, progress: (await get('progress')) || null };
+  window.__visync = { file: s.file, name: s.name, lang: s.lang, analysis: s.analysis, progress: (await get('progress')) || null };
   return true;
 }
