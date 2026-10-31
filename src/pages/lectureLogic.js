@@ -431,7 +431,13 @@ class Component extends DCLogic {
     if (this._pg === s.page && this._rec === s.recording) return;
     this._pg = s.page; this._rec = s.recording;
     const ch = chapterOf(s.page);
+    // 첫 녹음 전: 학생이 맞춰 둔 쪽이 수업 시작 위치. 건너뛴 앞 챕터는 '지난 챕터'로 치지 않음
+    if (!s.recording && !this.aiStarted) {
+      if (ch !== s.aiLive || s.page !== s.aiPage) this.setState({ aiLive: ch, aiPage: s.page, ...(s.follow ? { sel: ch, step: 0, playing: true } : {}) });
+      return;
+    }
     if (s.recording) {
+      this.aiStarted = true;
       if (!AIX.vizTimes[s.aiLive]) AIX.vizTimes[s.aiLive] = fmt(s.sec);
       if (ch > s.aiLive) {
         const prev = s.aiLive;
@@ -569,6 +575,14 @@ class Component extends DCLogic {
   setParam(ci, key, val) {
     this.setState(s => { const params = s.params.slice(); params[ci] = { ...params[ci], [key]: val }; return { params, explored: { ...s.explored, [ci]: true }, step: CH[ci].steps.length - 1, playing: false, tlb: ci === TLB_IDX ? null : s.tlb }; });
   }
+  // 페이지 번호로 바로 이동. AI 모드에선 '교수님이 지금 이 쪽'이라는 뜻이라 실시간 따라가기를 켬
+  jumpPage(raw) {
+    const t = String(raw).trim(), n = Math.round(Number(t)), total = this.pdf ? this.pdf.numPages : TOTAL;
+    if (!t || !Number.isFinite(n)) return this.state.page;
+    const page = Math.min(total, Math.max(1, n));
+    if (page !== this.state.page) this.setState({ page, follow: AIX.on });
+    return page;
+  }
   open(i) { if (i === this.live()) { this.goLive(); return; } this.setState({ sel: i, step: 0, page: CH[i].page, playing: true, tlb: null, follow: false }); }
   renderVals() {
     const s = this.state, L = this.live();
@@ -583,10 +597,11 @@ class Component extends DCLogic {
     const tagMap = { flow: ['원리 시각화', '#5B5FE8', '#F1F1FE'], image: ['자료 이미지', '#B26A12', '#FDF3E3'], text: ['텍스트', '#8A8D98', '#F3F4F6'] };
     const [tag, tagColor, tagBg] = tagMap[c.type];
     const chapters = CH.map((ch, i) => {
-      const sel = i === s.sel, done = i < L, live = i === L;
+      // AI 모드: 녹음 중 실제로 진행된 챕터만 '완료', 교수님이 건너뛴 챕터는 '건너뜀'
+      const sel = i === s.sel, skipped = AIX.on && i < L && !AIX.vizTimes[i], done = i < L && !skipped, live = i === L;
       return {
         no: String(i + 1).padStart(2, '0'), title: ch.title,
-        status: live ? '진행 중' : done ? '완료' : '예정',
+        status: live ? '진행 중' : done ? '완료' : skipped ? '건너뜀' : '예정',
         statusColor: live ? '#E5484D' : done ? '#2FA876' : '#B4B7C0',
         bg: sel ? '#F1F1FE' : 'transparent', border: sel ? '#E0DFFB' : 'transparent',
         titleColor: sel ? '#1C1D22' : (i > L ? '#8A8D98' : '#2E3038'), weight: sel ? 600 : 500,
@@ -643,6 +658,10 @@ class Component extends DCLogic {
       page: s.page, totalPages: this.pdf ? this.pdf.numPages : TOTAL,
       prevPage: () => this.setState({ page: Math.max(1, s.page - 1), follow: false }),
       nextPage: () => this.setState({ page: Math.min(this.pdf ? this.pdf.numPages : TOTAL, s.page + 1), follow: false }),
+      pageInputW: (String(this.pdf ? this.pdf.numPages : TOTAL).length + 2) + 'ch',
+      pageFocus: (ev) => ev.target.select(),
+      pageKey: (ev) => { if (ev.key === 'Enter') ev.target.blur(); else if (ev.key === 'Escape') { ev.target.value = s.page; ev.target.blur(); } },
+      pageBlur: (ev) => { ev.target.value = this.jumpPage(ev.target.value); },
       chapters, history,
       isReplay: !s.follow, offLive: !s.follow,
       goLive: () => this.goLive(),

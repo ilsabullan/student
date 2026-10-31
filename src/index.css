@@ -5,3 +5,5 @@ a{color:#5B5FE8;text-decoration:none}
 a:hover{color:#4347C9}
 @keyframes vzdash{to{stroke-dashoffset:-22}}
 @keyframes vsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.vs-pageinput:hover{border-color:#C9CCD4}
+.vs-pageinput:focus{border-color:#5B6CF0;box-shadow:0 0 0 2px rgba(91,108,240,.15)}

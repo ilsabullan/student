@@ -162,8 +162,10 @@ export default function LectureView(v) {
                           <path d={"m15 6-6 6 6 6"} />
                         </svg>
                       </button>
-                      <span style={{"fontVariantNumeric": "tabular-nums", "whiteSpace": "nowrap", "textAlign": "center"}}>
-                        {"p."}{v?.page}{" / "}{v?.totalPages}
+                      <span style={{"display": "flex", "alignItems": "center", "gap": "3px", "fontVariantNumeric": "tabular-nums", "whiteSpace": "nowrap"}}>
+                        {"p."}
+                        <input key={v?.page} className={"vs-pageinput"} defaultValue={v?.page} onFocus={v?.pageFocus} onKeyDown={v?.pageKey} onBlur={v?.pageBlur} inputMode={"numeric"} aria-label={"이동할 페이지 번호"} title={"페이지 번호를 입력하고 Enter"} style={{"width": v?.pageInputW, "height": "22px", "padding": "0 2px", "border": "1px solid #E3E5EA", "borderRadius": "6px", "background": "#FFFFFF", "color": "#1C1D22", "font": "inherit", "textAlign": "center", "outline": "none"}} />
+                        {"/ "}{v?.totalPages}
                       </span>
                       <button onClick={v?.nextPage} style={{"width": "26px", "height": "26px", "border": "none", "borderRadius": "7px", "background": "transparent", "color": "#6E717C", "cursor": "pointer", "display": "flex", "alignItems": "center", "justifyContent": "center"}}>
                         <svg width={"12"} height={"12"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>
