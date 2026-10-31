@@ -5,6 +5,7 @@ import SELF_SRC from './lectureLogic.js?raw';
 import { AIX, makeSim, api, LANGS, langLabel, rememberLang } from '../ai/client.js';
 import { RUNNER_SRC } from '../ai/runner.js';
 import { saveProgress, clearSession } from '../ai/session.js';
+import { pageCue } from '../ai/pagecue.js';
 
 const nf = (x) => Number.isInteger(x) ? String(x) : x.toFixed(1);
 const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻' };
@@ -491,24 +492,38 @@ class Component extends DCLogic {
     const n = s.micLines.length, from = this.locSent || 0;
     if (n <= from || Date.now() - (this.locAt || 0) < 8000) return;
     if (s.micLines.slice(from).map(x => x[1]).join(' ').length < 12) return;
-    const cur = s.aiPage, cand = AIX.pages.filter(p => p.page >= cur - 2 && p.page <= cur + 6);
+    const cur = s.aiPage, near = (p) => p.page >= cur - 2 && p.page <= cur + 6;
+    // 근처 쪽은 본문, 나머지 쪽은 앞부분(제목)만 보내서 멀리 건너뛴 경우도 찾을 수 있게
+    const cand = AIX.pages.slice(0, 150).map(p => ({ page: p.page, text: String(p.text || '').slice(0, near(p) ? 700 : 80) }));
     if (!cand.length) return;
-    const chs = [...new Set(cand.map(p => chapterOf(p.page)))].map(i => ({ title: CH[i].title, start: CH[i].start, end: CH[i].end, steps: CH[i].steps }));
+    const chs = [...new Set(AIX.pages.filter(near).map(p => chapterOf(p.page)))].map(i => ({ title: CH[i].title, start: CH[i].start, end: CH[i].end, steps: CH[i].steps }));
     this.locBusy = true; this.locAt = Date.now(); this.locSent = n;
-    api('/api/locate', { cur, pages: cand.map(p => ({ page: p.page, text: String(p.text || '').slice(0, 700) })), chapters: chs, lines: s.micLines.slice(-8).map(x => x[1]) }, 20000)
+    api('/api/locate', { cur, pages: cand, chapters: chs, lines: s.micLines.slice(-8).map(x => x[1]) }, 20000)
       .then(r => this.applyLocate(r, from, cur), e => console.warn('[Visync] 위치 추적 실패:', e.message))
       .finally(() => { this.locBusy = false; });
   }
+  // "39페이지로 넘어갈게요", "다음 장 보시면"처럼 쪽을 직접 말하면 AI를 기다리지 않고 바로 이동
+  cueMove(lines) {
+    if (!AIX.on) return;
+    const total = this.pdf ? this.pdf.numPages : (AIX.pages ? AIX.pages.length : TOTAL);
+    let to = 0;
+    for (const t of lines) to = pageCue(t, to || this.state.aiPage, total) || to;
+    if (!to || to === this.state.aiPage) return;
+    this.locCand = 0;
+    this.setState(st => ({ aiPage: to, ...(st.follow ? { page: to } : {}) }));
+    this.flash('교수님 말씀에 따라 p.' + to + '로 넘겼어요');
+  }
   applyLocate(r, from, asked) {
     const s = this.state;
-    if (!s.recording || s.aiPage !== asked) return; // 그 사이 학생이 위치를 직접 맞췄으면 이 결과는 버림
+    if (s.aiPage !== asked) return; // 그 사이 학생이나 쪽 번호 말씀으로 위치가 바뀌었으면 이 결과는 버림
     const page = Math.round(Number(r.page)), conf = Number(r.confidence) || 0;
     if (!page) return;
     let to = s.aiPage;
     if (page !== s.aiPage) {
       // 확신이 높으면 바로, 중간이면 두 번 연속 같은 쪽이 나올 때 이동 (잘못 넘어가는 것 방지)
-      if (conf >= 0.75 || (conf >= 0.45 && this.locCand === page)) { to = page; this.locCand = 0; }
-      else this.locCand = conf >= 0.45 ? page : 0;
+      const far = Math.abs(page - s.aiPage) > 6;
+      if (far ? conf >= 0.8 : (conf >= 0.75 || (conf >= 0.45 && this.locCand === page))) { to = page; this.locCand = 0; }
+      else this.locCand = !far && conf >= 0.45 ? page : 0;
     } else this.locCand = 0;
     const ch = chapterOf(to), steps = CH[ch].steps.length, step = Number(r.step);
     const stepOk = to === page && conf >= 0.45 && Number.isInteger(step) && step >= 0 && step < steps;
@@ -555,6 +570,7 @@ class Component extends DCLogic {
       let interim = ''; const add = [];
       for (let i = ev.resultIndex; i < ev.results.length; i++) { const r = ev.results[i]; if (r.isFinal) add.push(r[0].transcript.trim()); else interim += r[0].transcript; }
       this.setState(s => ({ micLines: s.micLines.concat(add.filter(Boolean).map(t => [fmt(s.sec), t, AIX.on ? s.aiPage : s.page])), interim }));
+      if (add.length) this.cueMove(add);
     };
     rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.flash('마이크 권한을 허용해 주세요'); this.stopMic(); this.setState({ recording: false }); } };
     rec.onend = () => { if (this.rec === rec && this.state.recording && this.state.mode === 'mic') { try { rec.start(); } catch (x) {} } };
