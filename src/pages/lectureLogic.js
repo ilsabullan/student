@@ -303,7 +303,7 @@ class Component extends DCLogic {
   _ai = applyAI(this);
   state = { heard: HEARD0, follow: true, explored: {}, sel: liveOf(HEARD0), step: liveStepOf(HEARD0, liveOf(HEARD0)), playing: false, recording: true, sec: SEC0, tab: 'summary', extra: 0, tick: 0, endOpen: false, toast: '', page: SCRIPT[HEARD0 - 1][2], params: initParams(), pdfLoading: true, pdfMsg: '강의 자료 불러오는 중…', tlb: null, mode: 'demo', micLines: [], interim: '', lay: loadLay(), fromStore: true, aspect: 0.75, vw: typeof window !== 'undefined' ? window.innerWidth : 1280, bh: 0, mtab: 'slide', bw: 0, zs: ['slide', 'notes', 'viz'], active: null };
   _aiInit = AIX.on ? Object.assign(this.state, { mode: 'mic', recording: false, heard: HEARD0, sel: 0, step: 0, playing: true, aiLive: 0, aiPage: CH[0].page, page: CH[0].page, params: initParams(), tab: 'transcript', sec: 0, lang: (window.__visync && window.__visync.lang) || 'ko-KR' }) : 0;
-  sumDone = {}; sumBusy = {}; lastStep = {};
+  sumDone = {}; sumBusy = {}; lastStep = {}; vizBox = {};
   _restored = AIX.on ? this.restore() : false;
   // 새로고침 전 진행 상황 되살리기 (마이크는 다시 켜야 하므로 녹음은 멈춘 상태로)
   restore() {
@@ -334,12 +334,13 @@ class Component extends DCLogic {
   vizSvgRef = React.createRef();
   fitViz() {
     const b = this.vizBodyRef.current, w = this.vizSvgRef.current;
-    if (w) fitSvgBox(w.querySelector('svg')); // 잘리는 그림은 화면 크기와 상관없이 먼저 바로잡기
+    if (w) fitSvgBox(w.querySelector('svg'), this.vizBox[this.state.sel] || (this.vizBox[this.state.sel] = {})); // 그림 범위에 맞춰 viewBox 조정
     if (!b || !w || this.state.vw < 640) return;
     const svg = w.querySelector('svg'); if (!svg) return;
-    const rest = b.scrollHeight - w.offsetHeight;
+    // 그림을 뺀 나머지(설명·조절·말씀)가 실제로 차지하는 높이. 남는 빈칸은 그림이 쓰도록 scrollHeight 대신 각 요소 높이를 더함
+    const rest = [...b.children].filter(c => c !== w).reduce((sum, c) => { const cs = getComputedStyle(c); return sum + c.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0); }, 0);
     const pad = w.offsetHeight - svg.getBoundingClientRect().height;
-    const max = Math.max(110, Math.min(460, Math.floor(b.clientHeight - rest - pad - 2)));
+    const max = Math.max(220, Math.min(620, Math.floor(b.clientHeight - rest - pad - 2)));
     if (Math.abs(max - (this.state.svgMax || 0)) > 3) this.setState({ svgMax: max });
   }
   drag = { slide: this.grabber('slide', 'move'), viz: this.grabber('viz', 'move'), notes: this.grabber('notes', 'move') };
@@ -666,14 +667,14 @@ class Component extends DCLogic {
   }
   exportScriptAI(L) {
     const codes = CH.slice(0, L + 1).map(ch => ch.sim ? ch.sim.code : null);
-    const code = RUNNER_SRC + '\nvar fitSvg=(' + fitSvgBox.toString() + ');' + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
+    const code = RUNNER_SRC + '\nvar fitSvg=(' + fitSvgBox.toString() + '),FITK={};' + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
       'function draw(i){var sim=SIMS[i];if(!sim)return;var o;try{o=evalSim(sim,P[i],99)}catch(e){return}var r=o.r,root=document.querySelector(\'[data-vz="\'+i+\'"]\');if(!root)return;' +
-      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");fitSvg(root.querySelector(".svg svg"));' +
+      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");fitSvg(root.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));' +
       'root.querySelector(".ex").textContent=r.explain;var fm=root.querySelector(".fm");fm.className="fm"+(r.warn?" warn":"");fm.querySelector("span").textContent=r.formulaLabel;fm.querySelector("b").textContent=r.formula;' +
       'sim.sliders.forEach(function(sl){var v=root.querySelector(\'[data-v="\'+i+\':\'+sl.key+\'"]\');if(v)v.textContent=o.fm[sl.key];var inp=root.querySelector(\'input[data-k="\'+sl.key+\'"]\');if(inp&&+inp.value!==P[i][sl.key])inp.value=P[i][sl.key];});}\n' +
       'document.addEventListener("input",function(ev){var t=ev.target;if(!t.dataset||t.dataset.i==null)return;P[+t.dataset.i][t.dataset.k]=+t.value;draw(+t.dataset.i);});\n' +
       'document.addEventListener("click",function(ev){var b=ev.target.closest("[data-reset]");if(!b)return;var i=+b.dataset.reset;P[i]=Object.assign({},SIMS[i].defaults);draw(i);});\n' +
-      'document.querySelectorAll(".svg svg").forEach(function(s){fitSvg(s);});\n';
+      'document.querySelectorAll("section[data-vz]").forEach(function(r){var i=+r.dataset.vz;fitSvg(r.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));});\n';
     return '<scr' + 'ipt>' + code.replace(/<\/(script)/gi, '<\\/$1') + '</scr' + 'ipt>';
   }
   setParam(ci, key, val) {
