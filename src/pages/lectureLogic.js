@@ -533,12 +533,6 @@ class Component extends DCLogic {
     return true;
   }
   stopMic() { const r = this.rec; this.rec = null; if (r) { try { r.stop(); } catch (x) {} } if (this.state && this.state.interim) this.setState({ interim: '' }); }
-  setMode(m) {
-    if (m === this.state.mode) return;
-    this.stopMic();
-    if (m === 'mic' && this.state.recording && !this.startMic()) return;
-    this.setState({ mode: m, tab: m === 'mic' ? 'transcript' : this.state.tab });
-  }
   download() {
     if (!AIX.on) { this.download2(); return; }
     const L0 = this.live(), ps = this.state.params;
@@ -741,7 +735,6 @@ class Component extends DCLogic {
       recBtnLabel: s.recording ? '녹음 중지' : '녹음 시작', recBtnTitle: s.recording ? '녹음 중지' : '녹음 시작',
       recBtnBg: s.recording ? '#1C1D22' : '#F2F3F6', recBtnColor: s.recording ? '#FFFFFF' : '#1C1D22',
       toggleRec: () => { const on = !s.recording; if (s.mode === 'mic') { if (on) { if (!this.startMic()) return; } else this.stopMic(); } this.setState({ recording: on }); },
-      modes: (AIX.on ? [['mic', '실제 음성']] : [['demo', '데모 대본'], ['mic', '실제 음성']]).map(([id, label]) => { const on = s.mode === id; return { label, go: () => this.setMode(id), bg: on ? '#FFFFFF' : 'transparent', color: on ? '#1C1D22' : '#8A8D98', shadow: on ? '0 1px 2px rgba(20,20,40,0.08)' : 'none' }; }),
       micEmpty: s.mode === 'mic' && !s.micLines.length && !s.interim,
       save: () => { this.download(); this.flash('필기 노트를 파일로 저장했어요'); },
       toast: s.toast,

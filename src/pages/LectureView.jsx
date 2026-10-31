@@ -278,18 +278,6 @@ export default function LectureView(v) {
                       </div>
                     </>) : null}
                   </div>
-                  <div style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between", "gap": "8px", "margin": "0 12px", "paddingTop": "10px", "borderTop": "1px solid #F0F1F4"}}>
-                    <span style={{"fontSize": "11px", "color": "#9A9DA8", "whiteSpace": "nowrap"}}>
-                      {"받아쓰기"}
-                    </span>
-                    <div style={{"display": "flex", "padding": "3px", "background": "#F2F3F6", "borderRadius": "8px", "gap": "2px"}}>
-                      {(v?.modes || []).map((md, md_i) => (<React.Fragment key={md_i}>
-                        <button onClick={md?.go} style={{"height": "24px", "padding": "0 10px", "border": "none", "borderRadius": "6px", "background": md?.bg, "color": md?.color, "boxShadow": md?.shadow, "fontSize": "11px", "fontWeight": "600", "cursor": "pointer", "fontFamily": "inherit", "whiteSpace": "nowrap"}}>
-                          {md?.label}
-                        </button>
-                      </React.Fragment>))}
-                    </div>
-                  </div>
                   <div style={{"margin": "12px", "padding": "12px", "border": "1px solid #E8EAF0", "borderRadius": "14px", "boxShadow": "0 10px 30px -14px rgba(90,80,200,0.18)", "display": "flex", "alignItems": "center", "gap": "12px"}}>
                     <div style={{"flex": "1", "minWidth": "0", "display": "flex", "flexDirection": "column", "gap": "6px"}}>
                       <div style={{"display": "flex", "alignItems": "center", "gap": "2px", "height": "22px"}}>
