@@ -245,7 +245,7 @@ export default function LectureView(v) {
                                       {it?.key}
                                     </span>
                                     {it?.post}{" "}
-                                    <span style={{"marginLeft": "4px", "fontSize": "10px", "fontWeight": "700", "color": "#B26A12", "background": "#FDF3E3", "padding": "2px 6px", "borderRadius": "5px", "verticalAlign": "1px", "display": it?.starDisplay}}>
+                                    <span title={it?.starTitle} style={{"marginLeft": "4px", "fontSize": "10px", "fontWeight": "700", "color": "#B26A12", "background": "#FDF3E3", "padding": "2px 6px", "borderRadius": "5px", "verticalAlign": "1px", "display": it?.starDisplay, "cursor": "help"}}>
                                       {"교수님 강조"}
                                     </span>
                                   </span>

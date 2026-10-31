@@ -583,7 +583,7 @@ class Component extends DCLogic {
     const date = now.getFullYear() + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + String(now.getDate()).padStart(2, '0');
     const sum = SUMMARY.slice(0, L + 1).map((items, i) =>
       '<section><div class="sh"><span class="no">' + String(i + 1).padStart(2, '0') + '</span><h2>' + esc(CH[i].title) + '</h2><span class="rg">강의 자료 p.' + RANGES[i] + '</span></div><ul>' +
-      items.map((it, j) => '<li>' + esc(it.pre) + '<mark>' + esc(it.key) + '</mark>' + esc(it.post) + (it.star ? ' <span class="star">교수님 강조</span>' : '') + '</li>').join('') +
+      items.map((it, j) => '<li>' + esc(it.pre) + '<mark>' + esc(it.key) + '</mark>' + esc(it.post) + (it.star ? ' <span class="star"' + (it.quote ? ' title="교수님: “' + esc(it.quote) + '”"' : '') + '>교수님 강조</span>' : '') + '</li>').join('') +
       '</ul></section>').join('');
     const vz = CH.slice(0, L + 1).map((ch, i) => {
       if (!ch.sim) return '';
@@ -710,7 +710,7 @@ class Component extends DCLogic {
     const pg = (n) => { const on = n === s.page; return { page: n, go: () => this.setState({ page: n, follow: false }), pBg: on ? '#5B6CF0' : '#F1F1FE', pColor: on ? '#FFFFFF' : '#4A4ED6', pBorder: on ? '#5B6CF0' : '#E0DFFB' }; };
     const transcript = tl.map((t, i) => ({ time: t[0], text: t[1], color: i === tl.length - 1 && s.recording ? '#1C1D22' : '#4B4E58', ...pg(s.mode === 'mic' ? ((s.micLines[i] || [])[2] || s.page) : SCRIPT[i][2]) }));
     const summary = SUMMARY.slice(0, L + 1).map((items, i) => ({ no: String(i + 1).padStart(2, '0'), title: CH[i].title,
-      items: items.map((it, j) => ({ ...it, starDisplay: it.star ? 'inline-block' : 'none', ...pg(SUM_PAGES[i][j]) })).slice(0, i === L ? Math.min(items.length, Math.max(1, Math.ceil(liveCount / 2))) : items.length), live: i === L && s.recording,
+      items: items.map((it, j) => ({ ...it, starDisplay: it.star ? 'inline-block' : 'none', starTitle: it.quote ? '교수님: “' + it.quote + '”' : '교수님이 강조한 내용', ...pg(SUM_PAGES[i][j]) })).slice(0, i === L ? Math.min(items.length, Math.max(1, Math.ceil(liveCount / 2))) : items.length), live: i === L && s.recording,
       range: RANGES[i], go: () => this.setState({ page: CH[i].page, follow: false }), pBg: '#FFFFFF', pColor: '#6E717C', pBorder: '#E8EAEE' }));
     const wave = Array.from({ length: 28 }, (_, i) => {
       const v = s.recording ? 0.2 + Math.abs(Math.sin(i * 0.9 + s.tick * 0.7) * Math.cos(i * 0.35 - s.tick * 0.4)) * 0.8 : 0.12;
