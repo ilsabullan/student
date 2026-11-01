@@ -100,6 +100,38 @@ export function fitSvgBox(svg, keep) {
   if (svg.getAttribute('viewBox') !== vb) svg.setAttribute('viewBox', vb);
 }
 
+// AI가 밝은 박스 위에 흰 글자를 쓰는 식으로 글자가 안 보이는 경우를 바로잡음.
+// 글자마다 바로 아래 깔린 도형의 색을 찾아 대비가 낮으면(3:1 미만) 어두운/흰 글자로 바꿈 (data-vs-ink + CSS !important).
+// 노트 파일에도 그대로 넣어 씀 (외부 변수 사용 금지)
+export function fixSvgContrast(svg) {
+  if (!svg || !svg.querySelector('marker')) return false;
+  const box = svg.getBoundingClientRect(); if (!box.width) return false; // 화면에 안 보이는 중이면 나중에
+  const cv = document.createElement('canvas').getContext('2d');
+  const rgb = (c) => { if (!c || c === 'none' || /^url|transparent|currentcolor/i.test(c)) return null; cv.fillStyle = '#000'; cv.fillStyle = c; const v = cv.fillStyle;
+    if (v[0] === '#') return [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16)).concat(1);
+    const m = v.match(/[\d.]+/g); return m ? [+m[0], +m[1], +m[2], m[3] == null ? 1 : +m[3]] : null; };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const op = (el) => { let o = 1; for (let n = el; n && n !== svg; n = n.parentNode) { const v = parseFloat(n.style && n.style.opacity); if (!isNaN(v)) o *= v; const a = parseFloat(n.getAttribute && n.getAttribute('opacity')); if (!isNaN(a)) o *= a; } return o; };
+  const shapes = [...svg.querySelectorAll('rect,circle,ellipse,polygon,path')].filter(s => !s.closest('defs'));
+  svg.querySelectorAll('text').forEach(t => {
+    t.removeAttribute('data-vs-ink');
+    const r = t.getBoundingClientRect(); if (!r.width) return;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let bg = [255, 255, 255];
+    for (const s of shapes) {
+      if (!(s.compareDocumentPosition(t) & 4)) continue; // 글자보다 먼저(아래에) 그려진 도형만
+      const c = rgb(s.getAttribute('fill') || (s.style && s.style.fill)); if (!c) continue;
+      const a = c[3] * op(s) * (parseFloat(s.getAttribute('fill-opacity')) || 1); if (a < 0.35) continue;
+      const b = s.getBoundingClientRect(); if (cx < b.left || cx > b.right || cy < b.top || cy > b.bottom) continue;
+      bg = c.slice(0, 3).map((v, i) => v * a + bg[i] * (1 - a));
+    }
+    const fg = rgb(getComputedStyle(t).fill); if (!fg) return;
+    const L1 = lum(fg), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+    if (ratio < 3) t.setAttribute('data-vs-ink', L2 > 0.4 ? 'dark' : 'light');
+  });
+  return true;
+}
+
 export function toReact(n, key) {
   if (typeof n !== 'object') return String(n);
   if (!n || !TAGS.has(n.t)) return null;

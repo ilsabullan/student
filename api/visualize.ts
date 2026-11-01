@@ -17,7 +17,7 @@ Shape:
 })
 
 Drawing kit (already in scope via kit(st)):
-- R(kind, x, y, w, h, rx)  rectangle. kind: 'box' (white), 'blue' (accent), 'hi' (yellow highlight), 'green' (result), 'red' (warning)
+- R(kind, x, y, w, h, rx)  rectangle. kind: 'box' (white), 'blue' (light lavender tint), 'hi' (light yellow), 'green' (light green), 'red' (light red). ALL kinds are LIGHT backgrounds: text on them must be dark (default INK, or ACC/GRN/RED for emphasis). Never use white text unless you drew your own dark fill behind it.
 - T(x, y, text, size, extra)  text. size: 's' small grey 12.5px, undefined 14px, 'b' bold 17px, 'xl' bold 23px. extra e.g. { fill: ACC, textAnchor: 'middle' }
 - A(d, { flow, red, op })  arrow along SVG path d with arrowhead; flow:true = animated moving dashes
 - L(x1, y1, x2, y2, color, width)  line;  C(cx, cy, r, kind) circle;  P(d, fill, stroke) path

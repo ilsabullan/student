@@ -7,3 +7,6 @@ a:hover{color:#4347C9}
 @keyframes vsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 .vs-pageinput:hover{border-color:#C9CCD4}
 .vs-pageinput:focus{border-color:#5B6CF0;box-shadow:0 0 0 2px rgba(91,108,240,.15)}
+/* AI 시각화 글자 대비 보정 (client.js fixSvgContrast) */
+[data-vs-ink=dark]{fill:#1C1D22!important}
+[data-vs-ink=light]{fill:#FFFFFF!important}

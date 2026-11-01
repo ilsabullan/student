@@ -2,7 +2,7 @@ import React from 'react';
 import { DCLogic } from '../dc';
 import View from './LectureView.jsx';
 import SELF_SRC from './lectureLogic.js?raw';
-import { AIX, makeSim, api, LANGS, langLabel, rememberLang, fitSvgBox } from '../ai/client.js';
+import { AIX, makeSim, api, LANGS, langLabel, rememberLang, fitSvgBox, fixSvgContrast } from '../ai/client.js';
 import { RUNNER_SRC } from '../ai/runner.js';
 import { saveProgress, clearSession } from '../ai/session.js';
 import { pageCue } from '../ai/pagecue.js';
@@ -334,7 +334,11 @@ class Component extends DCLogic {
   vizSvgRef = React.createRef();
   fitViz() {
     const b = this.vizBodyRef.current, w = this.vizSvgRef.current;
-    if (w) fitSvgBox(w.querySelector('svg'), this.vizBox[this.state.sel] || (this.vizBox[this.state.sel] = {})); // 그림 범위에 맞춰 viewBox 조정
+    const sv = w && w.querySelector('svg');
+    if (sv) {
+      fitSvgBox(sv, this.vizBox[this.state.sel] || (this.vizBox[this.state.sel] = {})); // 그림 범위에 맞춰 viewBox 조정
+      if (sv.__vsInk !== this._vizEl && fixSvgContrast(sv)) sv.__vsInk = this._vizEl; // 그림이 바뀔 때만 글자 대비 점검
+    }
     if (!b || !w || this.state.vw < 640) return;
     const svg = w.querySelector('svg'); if (!svg) return;
     // 그림을 뺀 나머지(설명·조절·말씀)가 실제로 차지하는 높이. 남는 빈칸은 그림이 쓰도록 scrollHeight 대신 각 요소 높이를 더함
@@ -626,7 +630,7 @@ class Component extends DCLogic {
     const tr = tl.map((t, i) => '<div class="tl"><span class="tm">' + t[0] + '</span><p>' + esc(t[1]) + '</p></div>').join('');
     const html = '<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OS #11 Memory Management 1 · 필기 노트</title>' +
       '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">' +
-      '<style>*{box-sizing:border-box}body{margin:0;background:#F6F7F9;color:#1C1D22;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;word-break:keep-all;-webkit-font-smoothing:antialiased}' +
+      '<style>[data-vs-ink=dark]{fill:#1C1D22!important}[data-vs-ink=light]{fill:#fff!important}*{box-sizing:border-box}body{margin:0;background:#F6F7F9;color:#1C1D22;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;word-break:keep-all;-webkit-font-smoothing:antialiased}' +
       '.wrap{max-width:760px;margin:40px auto;padding:0 20px}.card{background:#fff;border:1px solid #ECEEF2;border-radius:16px;padding:28px 32px;margin-bottom:16px}' +
       'header .meta{font-size:13px;color:#8A8D98;display:flex;gap:10px;flex-wrap:wrap}header h1{margin:6px 0 0;font-size:26px;letter-spacing:-0.02em}.brand{font-size:12px;font-weight:700;color:#5B5FE8;letter-spacing:.02em}' +
       'h3{margin:0 0 18px;font-size:15px;color:#4B4E58}section{margin-bottom:22px}section:last-child{margin-bottom:0}.sh{display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #ECEEF2;margin-bottom:10px}' +
@@ -667,14 +671,14 @@ class Component extends DCLogic {
   }
   exportScriptAI(L) {
     const codes = CH.slice(0, L + 1).map(ch => ch.sim ? ch.sim.code : null);
-    const code = RUNNER_SRC + '\nvar fitSvg=(' + fitSvgBox.toString() + '),FITK={};' + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
+    const code = RUNNER_SRC + '\nvar fitSvg=(' + fitSvgBox.toString() + '),fixInk=(' + fixSvgContrast.toString() + '),FITK={};' + '\nvar SIMS=' + JSON.stringify(codes) + '.map(function(c){try{return c?buildSim(c):null}catch(e){return null}});\nvar P=' + JSON.stringify(this.state.params.slice(0, L + 1)) + ';\n' +
       'function draw(i){var sim=SIMS[i];if(!sim)return;var o;try{o=evalSim(sim,P[i],99)}catch(e){return}var r=o.r,root=document.querySelector(\'[data-vz="\'+i+\'"]\');if(!root)return;' +
-      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");fitSvg(root.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));' +
+      'root.querySelector(".svg").innerHTML=jmk(o.tree).replace("min-width:500px","min-width:0");fitSvg(root.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));fixInk(root.querySelector(".svg svg"));' +
       'root.querySelector(".ex").textContent=r.explain;var fm=root.querySelector(".fm");fm.className="fm"+(r.warn?" warn":"");fm.querySelector("span").textContent=r.formulaLabel;fm.querySelector("b").textContent=r.formula;' +
       'sim.sliders.forEach(function(sl){var v=root.querySelector(\'[data-v="\'+i+\':\'+sl.key+\'"]\');if(v)v.textContent=o.fm[sl.key];var inp=root.querySelector(\'input[data-k="\'+sl.key+\'"]\');if(inp&&+inp.value!==P[i][sl.key])inp.value=P[i][sl.key];});}\n' +
       'document.addEventListener("input",function(ev){var t=ev.target;if(!t.dataset||t.dataset.i==null)return;P[+t.dataset.i][t.dataset.k]=+t.value;draw(+t.dataset.i);});\n' +
       'document.addEventListener("click",function(ev){var b=ev.target.closest("[data-reset]");if(!b)return;var i=+b.dataset.reset;P[i]=Object.assign({},SIMS[i].defaults);draw(i);});\n' +
-      'document.querySelectorAll("section[data-vz]").forEach(function(r){var i=+r.dataset.vz;fitSvg(r.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));});\n';
+      'document.querySelectorAll("section[data-vz]").forEach(function(r){var i=+r.dataset.vz;fitSvg(r.querySelector(".svg svg"),FITK[i]||(FITK[i]={}));fixInk(r.querySelector(".svg svg"));});\n';
     return '<scr' + 'ipt>' + code.replace(/<\/(script)/gi, '<\\/$1') + '</scr' + 'ipt>';
   }
   setParam(ci, key, val) {
@@ -766,7 +770,7 @@ class Component extends DCLogic {
       fileName: (window.__visync && window.__visync.name) || 'OS_11-Memory-management-1.pdf',
       cur: { no: String(s.sel + 1).padStart(2, '0'), title: c.title, hasViz, tag, tagColor, tagBg, pageLabel: '강의 자료 p.' + c.page },
       noViz: !hasViz, emptyTitle: future ? '아직 진행되지 않은 챕터예요' : '시각화할 흐름이 없는 챕터예요',
-      vizSvg: hasViz ? (() => { const el = c.sim.draw(p, s.step, s.tlb); return s.svgMax && s.vw >= 640 ? React.cloneElement(el, { style: { ...el.props.style, width: 'auto', minWidth: 0, maxWidth: '100%', height: s.svgMax + 'px' } }) : el; })() : null,
+      vizSvg: hasViz ? (() => { const el = this._vizEl = c.sim.draw(p, s.step, s.tlb); return s.svgMax && s.vw >= 640 ? React.cloneElement(el, { style: { ...el.props.style, width: 'auto', minWidth: 0, maxWidth: '100%', height: s.svgMax + 'px' } }) : el; })() : null,
       vizBodyRef: this.vizBodyRef, vizSvgRef: this.vizSvgRef,
       canvasRef: this.canvasRef, pdfLoading: s.pdfLoading, pdfMsg: s.pdfMsg,
       page: s.page, totalPages: this.pdf ? this.pdf.numPages : TOTAL,
