@@ -787,7 +787,9 @@ class Component extends DCLogic {
       formulaLabel: r ? r.formulaLabel : '', formula: r ? r.formula : '', explain: r ? r.explain : '',
       formulaBg: warn ? '#FFF6F6' : '#F7F7FD', formulaBorder: warn ? '#F3D0D1' : '#E0DFFB', formulaColor: warn ? '#D2383E' : '#1C1D22',
       resetSim: () => { const params = s.params.slice(); params[s.sel] = { ...c.sim.defaults }; this.setState({ params, tlb: null }); },
-      say: sayLine ? sayLine[1] : (c.steps[s.step] || ''), sayTime: sayLine ? sayLine[0] : '다시 보기',
+      // 교수님이 이 단계에서 실제로 하신 말씀이 있으면 그 말씀, 없으면 AI가 시각화를 만들 때 쓴 단계 설명 (교수님 말씀처럼 보이지 않게 구분)
+      say: sayLine ? sayLine[1] : (c.steps[s.step] || ''), isQuote: !!sayLine, notQuote: !sayLine,
+      sayHead: sayLine ? '교수님 설명 · ' + sayLine[0] : '시각화 단계 설명 · ' + (s.step + 1) + '/' + Math.max(1, n),
       playing: s.playing, paused: !s.playing, pauseIcon: s.playing ? 'block' : 'none', playIcon: s.playing ? 'none' : 'block', recIconRadius: s.recording ? '2px' : '50%', recIconBg: s.recording ? '#FFFFFF' : '#E5484D', playTitle: s.playing ? '일시정지' : '재생',
       togglePlay: () => s.playing ? this.setState({ playing: false }) : this.setState({ playing: true, step: s.step >= n - 1 ? 0 : s.step }),
       replay: () => this.setState({ step: 0, playing: true, tlb: null }),
