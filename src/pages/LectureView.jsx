@@ -360,6 +360,24 @@ export default function LectureView(v) {
                       <div ref={v?.vizSvgRef} style={{"padding": "10px 16px 4px", "position": "relative", "overflowX": "auto", "flexShrink": "0", "display": "flex", "justifyContent": "center"}}>
                         {v?.vizSvg}
                       </div>
+                      <div style={{"margin": "2px 14px 10px", "padding": "9px 12px", "borderRadius": "10px", "background": "#F7F7FD", "border": "1px solid #ECEBFB", "display": "flex", "flexDirection": "column", "gap": "2px", "position": "relative", "flexShrink": "0"}}>
+                        <span style={{"fontSize": "11px", "color": "#7C7FF2", "fontWeight": "600", "display": "flex", "alignItems": "center", "gap": "6px"}}>
+                          {v?.isQuote ? (<>
+                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>
+                              <rect x={"9"} y={"3"} width={"6"} height={"11"} rx={"3"} />
+                              <path d={"M5 11a7 7 0 0 0 14 0"} />
+                            </svg>
+                          </>) : (<>
+                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>
+                              <path d={"M12 3l2.2 5.3L20 9l-4.4 3.8L17 18.5 12 15.6 7 18.5l1.4-5.7L4 9l5.8-.7z"} />
+                            </svg>
+                          </>)}
+                          {v?.sayHead}
+                        </span>
+                        <span style={{"fontSize": "13px", "lineHeight": "1.55", "color": "#2E3038"}}>
+                          {v?.isQuote ? "“" : ""}{v?.say}{v?.isQuote ? "”" : ""}
+                        </span>
+                      </div>
                       <span style={{"fontSize": "13px", "lineHeight": "1.6", "color": "#4B4E58", "textWrap": "pretty", "padding": "2px 16px 10px", "position": "relative"}}>
                         {v?.explain}
                       </span>
@@ -401,24 +419,6 @@ export default function LectureView(v) {
                             </div>
                           </React.Fragment>))}
                         </div>
-                      </div>
-                      <div style={{"margin": "0 14px 12px", "padding": "9px 12px", "borderRadius": "10px", "background": "#F7F7FD", "border": "1px solid #ECEBFB", "display": "flex", "flexDirection": "column", "gap": "2px", "position": "relative", "flexShrink": "0"}}>
-                        <span style={{"fontSize": "11px", "color": "#7C7FF2", "fontWeight": "600", "display": "flex", "alignItems": "center", "gap": "6px"}}>
-                          {v?.isQuote ? (<>
-                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>
-                              <rect x={"9"} y={"3"} width={"6"} height={"11"} rx={"3"} />
-                              <path d={"M5 11a7 7 0 0 0 14 0"} />
-                            </svg>
-                          </>) : (<>
-                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2.2"}>
-                              <path d={"M12 3l2.2 5.3L20 9l-4.4 3.8L17 18.5 12 15.6 7 18.5l1.4-5.7L4 9l5.8-.7z"} />
-                            </svg>
-                          </>)}
-                          {v?.sayHead}
-                        </span>
-                        <span style={{"fontSize": "13px", "lineHeight": "1.55", "color": "#2E3038"}}>
-                          {v?.isQuote ? "“" : ""}{v?.say}{v?.isQuote ? "”" : ""}
-                        </span>
                       </div>
                     </>) : null}
                     {v?.noViz ? (<>
