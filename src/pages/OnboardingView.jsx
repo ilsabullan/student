@@ -3,11 +3,11 @@ import React from 'react';
 export default function OnboardingView(v) {
   return (
     <>
-    <div style={{"minHeight": "100vh", "padding": "20px", "display": "flex"}}>
-      <div style={{"flex": "1", "display": "flex", "gap": "12px", "background": "#F6F7F9", "border": "1px solid #E3E5EA", "borderRadius": "22px", "padding": "12px", "minHeight": "calc(100vh - 40px)"}}>
+    <div className={"vs-ob-outer"} style={{"minHeight": "100vh", "padding": "20px", "display": "flex"}}>
+      <div className={"vs-ob-frame"} style={{"flex": "1", "minWidth": "0", "display": "flex", "gap": "12px", "background": "#F6F7F9", "border": "1px solid #E3E5EA", "borderRadius": "22px", "padding": "12px", "minHeight": "calc(100vh - 40px)"}}>
         <main style={{"flex": "1", "minWidth": "0", "background": "#FBFBFC", "border": "1px solid #ECEEF2", "borderRadius": "16px", "display": "flex", "flexDirection": "column", "position": "relative", "overflow": "hidden"}}>
           <div style={{"position": "absolute", "left": "50%", "top": "58%", "width": "720px", "height": "420px", "transform": "translate(-50%,-50%)", "background": "radial-gradient(ellipse at center, rgba(150,140,250,0.16), rgba(150,140,250,0) 65%)", "pointerEvents": "none"}} />
-          <header style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between", "padding": "16px 20px", "position": "relative"}}>
+          <header className={"vs-ob-header"} style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between", "padding": "16px 20px", "position": "relative"}}>
             <div style={{"display": "flex", "alignItems": "center", "gap": "14px", "minWidth": "0"}}>
         <div style={{"display": "flex", "alignItems": "center", "gap": "8px"}}>
         <div style={{"width": "45px", "height": "30px", "flexShrink": "0", "display": "flex", "alignItems": "center", "justifyContent": "center"}}>
@@ -15,7 +15,7 @@ export default function OnboardingView(v) {
         </div>
         <span style={{"fontSize": "17px", "fontWeight": "700", "letterSpacing": "-0.02em"}}>{"Visync"}</span>
         </div>
-        <div style={{"display": "flex", "alignItems": "center", "gap": "8px", "height": "34px", "padding": "0 12px", "border": "1px solid #E8EAEE", "borderRadius": "10px", "background": "#FFFFFF", "fontSize": "13px", "fontWeight": "600", "color": "#2E3038", "whiteSpace": "nowrap", "flexShrink": "0"}}>
+        <div className={"vs-ob-mode"} style={{"display": "flex", "alignItems": "center", "gap": "8px", "height": "34px", "padding": "0 12px", "border": "1px solid #E8EAEE", "borderRadius": "10px", "background": "#FFFFFF", "fontSize": "13px", "fontWeight": "600", "color": "#2E3038", "whiteSpace": "nowrap", "flexShrink": "0"}}>
               <span style={{"width": "8px", "height": "8px", "borderRadius": "50%", "background": "#7C7FF2"}} />
               {"학생 모드"}
             </div>

@@ -10,3 +10,10 @@ a:hover{color:#4347C9}
 /* AI 시각화 글자 대비 보정 (client.js fixSvgContrast) */
 [data-vs-ink=dark]{fill:#1C1D22!important}
 [data-vs-ink=light]{fill:#FFFFFF!important}
+/* 휴대폰: 온보딩 바깥 여백을 줄이고 머리글이 화면 밖으로 밀리지 않게 */
+@media (max-width: 640px) {
+  .vs-ob-outer { padding: 8px !important; }
+  .vs-ob-frame { padding: 6px !important; border-radius: 16px !important; min-height: calc(100vh - 16px) !important; }
+  .vs-ob-header { padding: 12px 12px !important; gap: 8px; }
+  .vs-ob-mode { display: none !important; }
+}
