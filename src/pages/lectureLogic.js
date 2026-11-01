@@ -753,7 +753,7 @@ class Component extends DCLogic {
     const fits = (lz) => { if (!lz || !s.bw) return !!lz; const W = (c) => Math.max(c.w, 260 / s.bw); const ids = ['slide', 'notes', 'viz']; for (const id of ids) if (lz[id].x + W(lz[id]) > 1.001) return false; for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) { const a = lz[ids[i]], b = lz[ids[j]]; if (a.x < b.x + W(b) && b.x < a.x + W(a) && a.y < b.y + b.h && b.y < a.y + a.h) return false; } return true; };
     const eff = s.lay && (!s.fromStore || fits(s.lay)) ? s.lay : defLay(s.bw, s.aspect, s.bh);
     this.lastEff = eff;
-    const phone = s.vw < 640, compact = s.vw < 1024;
+    const phone = s.vw < 640, compact = s.vw < 1200; // 1200px 미만은 챕터를 위쪽 칩으로 (좁은 사이드바에서 제목이 한 단어씩 줄바꿈되던 문제)
     const lay = {}; let bottom = 0;
     ['slide', 'notes', 'viz'].forEach(id => {
       const c2 = { ...eff[id] }, on = s.active === id;
@@ -764,13 +764,13 @@ class Component extends DCLogic {
     });
     return {
       boardRef: this.boardRef, lay, boardH: phone ? 'auto' : (bottom + 8) + 'px',
-      ui: { minH: phone ? '0' : '640px', outerPad: phone ? '0' : compact ? '10px' : '20px', shellBorder: phone ? 'none' : '1px solid #E3E5EA', shellRadius: phone ? '0' : '22px', shellPad: phone ? '0' : compact ? '8px' : '12px', mainRadius: phone ? '0' : '16px', headPad: phone ? '10px 12px' : '12px 16px', crumbFile: phone ? 'none' : 'inline', textDisp: phone ? 'none' : 'inline', gridCols: compact ? 'minmax(0,1fr)' : 'clamp(140px,14vw,220px) minmax(0,1fr)', sideNav: compact ? 'none' : 'flex', chipNav: compact ? 'flex' : 'none', secPad: phone ? '14px 12px' : compact ? '16px' : '20px', h1: phone ? '20px' : '24px', desktopOnly: phone ? 'none' : 'flex', tabBar: phone ? 'flex' : 'none', boardDisplay: phone ? 'flex' : 'block', handle: phone ? 'none' : 'flex', grabCursor: phone ? 'default' : 'grab' },
+      ui: { minH: phone ? '0' : '640px', outerPad: phone ? '0' : compact ? '10px' : '20px', shellBorder: phone ? 'none' : '1px solid #E3E5EA', shellRadius: phone ? '0' : '22px', shellPad: phone ? '0' : compact ? '8px' : '12px', mainRadius: phone ? '0' : '16px', headPad: phone ? '10px 12px' : '12px 16px', crumbFile: phone ? 'none' : 'inline', textDisp: phone ? 'none' : 'inline', gridCols: compact ? 'minmax(0,1fr)' : 'clamp(180px,15vw,240px) minmax(0,1fr)', sideNav: compact ? 'none' : 'flex', chipNav: compact ? 'flex' : 'none', secPad: phone ? '14px 12px' : compact ? '16px' : '20px', h1: phone ? '20px' : '24px', desktopOnly: phone ? 'none' : 'flex', tabBar: phone ? 'flex' : 'none', boardDisplay: phone ? 'flex' : 'block', handle: phone ? 'none' : 'flex', grabCursor: phone ? 'default' : 'grab' },
       mtabs: [['slide', '강의 자료'], ['viz', '시각화'], ['notes', '필기 노트']].map(([id, label]) => { const on = s.mtab === id; return { label, go: () => this.setState({ mtab: id }), bg: on ? '#FFFFFF' : 'transparent', color: on ? '#1C1D22' : '#8A8D98', shadow: on ? '0 1px 2px rgba(20,20,40,0.08)' : 'none' }; }), drag: this.drag, resize: this.resize,
       resetLayout: () => { try { localStorage.removeItem(LAY_KEY); } catch (x) {} this.setState({ lay: null }, () => this.renderPage()); },
       fileName: (window.__visync && window.__visync.name) || 'OS_11-Memory-management-1.pdf',
       cur: { no: String(s.sel + 1).padStart(2, '0'), title: c.title, hasViz, tag, tagColor, tagBg, pageLabel: '강의 자료 p.' + c.page },
       noViz: !hasViz, emptyTitle: future ? '아직 진행되지 않은 챕터예요' : '시각화할 흐름이 없는 챕터예요',
-      vizSvg: hasViz ? (() => { const el = this._vizEl = c.sim.draw(p, s.step, s.tlb); return s.svgMax && s.vw >= 640 ? React.cloneElement(el, { style: { ...el.props.style, width: 'auto', minWidth: 0, maxWidth: '100%', height: s.svgMax + 'px' } }) : el; })() : null,
+      vizSvg: hasViz ? (() => { const el = this._vizEl = c.sim.draw(p, s.step, s.tlb); return s.svgMax && s.vw >= 640 ? React.cloneElement(el, { style: { ...el.props.style, width: 'auto', minWidth: 0, maxWidth: '100%', height: s.svgMax + 'px' } }) : s.vw < 640 ? React.cloneElement(el, { style: { ...el.props.style, width: '100%', minWidth: 0, height: 'auto' } }) : el; })() : null,
       vizBodyRef: this.vizBodyRef, vizSvgRef: this.vizSvgRef,
       canvasRef: this.canvasRef, pdfLoading: s.pdfLoading, pdfMsg: s.pdfMsg,
       page: s.page, totalPages: this.pdf ? this.pdf.numPages : TOTAL,
