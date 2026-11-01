@@ -378,9 +378,6 @@ export default function LectureView(v) {
                           {v?.isQuote ? "“" : ""}{v?.say}{v?.isQuote ? "”" : ""}
                         </span>
                       </div>
-                      <span style={{"fontSize": "13px", "lineHeight": "1.6", "color": "#4B4E58", "textWrap": "pretty", "padding": "2px 16px 10px", "position": "relative"}}>
-                        {v?.explain}
-                      </span>
                       <div style={{"margin": "0 14px 10px", "padding": "12px", "border": "1px solid #ECEEF2", "borderRadius": "12px", "background": "#FCFCFD", "display": "flex", "flexDirection": "column", "gap": "10px", "position": "relative"}}>
                         <div style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between", "gap": "8px"}}>
                           <span style={{"display": "flex", "alignItems": "center", "gap": "6px", "fontSize": "13px", "fontWeight": "600", "color": "#2E3038", "whiteSpace": "nowrap"}}>
@@ -404,6 +401,9 @@ export default function LectureView(v) {
                             {v?.formula}
                           </span>
                         </div>
+                        <span style={{"fontSize": "13px", "lineHeight": "1.6", "color": "#4B4E58", "textWrap": "pretty", "padding": "0 2px", "marginTop": "-2px"}}>
+                          {v?.explain}
+                        </span>
                         <div style={{"display": "grid", "gridTemplateColumns": "repeat(auto-fit,minmax(160px,1fr))", "gap": "14px 20px"}}>
                           {(v?.sliders || []).map((sl, sl_i) => (<React.Fragment key={sl_i}>
                             <div style={{"display": "flex", "flexDirection": "column", "gap": "6px"}}>
