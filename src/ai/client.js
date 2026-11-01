@@ -1,4 +1,6 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { RUNNER_SRC } from './runner.js';
 
 // 강의 언어 (Chrome 음성 인식은 한 번에 한 언어만 지원)
@@ -148,6 +150,36 @@ const MSG_SVG = (msg) => React.createElement('svg', { viewBox: '0 0 560 120', st
   React.createElement('text', { x: 280, y: 64, textAnchor: 'middle', fontSize: 14, fill: '#8A8D98', fontFamily: 'inherit' }, msg));
 
 // 기존 수업 페이지의 sim 인터페이스(sliders/defaults/run/draw)를 그대로 흉내 내는 래퍼. 결과는 비동기로 채워지고 onUpdate로 다시 그립니다.
+// 시각화를 화면 밖에서 한 번 그려보고 글자끼리, 또는 글자와 박스 테두리가 겹치는지 검사.
+// 문제가 있으면 AI에게 넘길 설명을, 없으면 ''를 돌려줌
+export function layoutIssues(tree) {
+  if (typeof document === 'undefined' || !tree) return '';
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:900px;visibility:hidden;pointer-events:none';
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    flushSync(() => root.render(toReact(tree, 'probe')));
+    const svg = host.querySelector('svg'); if (!svg) return '';
+    const box = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, a: r.width * r.height }; };
+    const inter = (p, q) => Math.max(0, Math.min(p.r, q.r) - Math.max(p.l, q.l)) * Math.max(0, Math.min(p.b, q.b) - Math.max(p.t, q.t));
+    const texts = [...svg.querySelectorAll('text')].filter(t => t.textContent.trim() && !t.closest('defs'))
+      .map(t => ({ s: t.textContent.trim().slice(0, 24), r: box(t) })).filter(x => x.r.a > 6);
+    const rects = [...svg.querySelectorAll('rect')].filter(e => !e.closest('defs')).map(box).filter(r => r.r - r.l > 6 && r.b - r.t > 6);
+    const out = [];
+    for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
+      const p = texts[i], q = texts[j];
+      if (inter(p.r, q.r) > 0.15 * Math.min(p.r.a, q.r.a)) out.push(`글자 '${p.s}'와 '${q.s}'가 겹쳐요`);
+    }
+    for (const t of texts) for (const r of rects) {
+      const f = inter(t.r, r) / t.r.a; // 박스 안에 반쯤만 걸친 글자
+      if (f > 0.15 && f < 0.85) { out.push(`글자 '${t.s}'가 박스 테두리에 걸쳐 있어요`); break; }
+    }
+    return [...new Set(out)].slice(0, 4).join('; ');
+  } catch (e) { return ''; }
+  finally { root.unmount(); host.remove(); }
+}
+
 export function makeSim(spec, onUpdate) {
   const cache = new Map(), pending = new Map(), runs = new Map(), fms = new Map();
   let last = null;
@@ -178,7 +210,7 @@ export function makeSim(spec, onUpdate) {
 
 // ---------- 시각화 생성 (실패 시 오류를 알려주고 1번 재시도) ----------
 export async function generateViz(ch, text) {
-  let prev = null, error = null;
+  let prev = null, error = null, fallback = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     let code;
     try { code = (await api('/api/visualize', { title: ch.title, vizTitle: ch.vizTitle, focus: ch.focus, type: ch.type, start: ch.start, end: ch.end, text, prev, error }, 240000)).code; }
@@ -190,11 +222,17 @@ export async function generateViz(ch, text) {
       const d = { ...meta.defaults };
       meta.sliders.forEach(s => { if (typeof d[s.key] !== 'number') d[s.key] = s.min; });
       await simEval(code, d, 0);
-      await simEval(code, d, 99);
+      const full = await simEval(code, d, 99);
       await simEval(code, Object.fromEntries(meta.sliders.map(s => [s.key, s.max])), 99);
-      return { code, vizTitle: meta.vizTitle || ch.vizTitle, steps: meta.steps, sliders: meta.sliders, defaults: d };
+      const res = { code, vizTitle: meta.vizTitle || ch.vizTitle, steps: meta.steps, sliders: meta.sliders, defaults: d };
+      // 실행은 되지만 글자가 겹치면 한 번 다시 그리게 함. 다시 그린 게 실패하면 겹친 그림이라도 씀
+      const lay = attempt === 0 ? layoutIssues(full.tree) : '';
+      if (!lay) return res;
+      fallback = res;
+      throw new Error('코드는 실행되지만 그림 배치가 겹쳐요: ' + lay + '. 아무것도 겹치지 않게 좌표를 옮기고, 설명 글자는 박스 밖 별도 줄에 두고, 자리가 부족하면 viewBox 높이를 늘려 주세요.');
     } catch (e) { prev = code; error = e.message; }
   }
+  if (fallback) return fallback;
   console.warn('[Visync] 시각화 생성 실패:', ch.title, error);
   return { failed: true, error: error || '알 수 없는 오류' };
 }
